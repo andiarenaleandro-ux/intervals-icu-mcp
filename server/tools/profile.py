@@ -75,7 +75,7 @@ def update_bike_fit(
 
     fit = data["bike_fit"]
     crank = fit["crank_length_mm"]
-    pos = fit["position"]
+    pos = fit["position_current"]
 
     if crank_length_current_mm is not None:
         crank["current"] = crank_length_current_mm
