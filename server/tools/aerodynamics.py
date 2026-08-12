@@ -37,6 +37,8 @@ def estimate_cda_from_position(
     torso_angle_deg: float,
     hip_angle_deg: float,
     elbow_angle_deg: float,
+    total_mass_kg: float,
+    reference_powers_w: list[float] = None,
     frontal_area_notes: str = None,
 ) -> dict:
     """
@@ -46,9 +48,15 @@ def estimate_cda_from_position(
     torso_angle_deg: ángulo del torso respecto a horizontal (menor = más aero)
     hip_angle_deg: ángulo cadera en PMS entre torso y fémur
     elbow_angle_deg: ángulo entre torso y húmero en posición aero
+    total_mass_kg: masa total del atleta + equipo (cuerpo + bici) en kg, usada
+                   para las estimaciones de velocidad. Parámetro obligatorio.
+    reference_powers_w: potencias (W) para las que se estima velocidad.
+                        Si no se pasa, usa valores genéricos [200, 250, 300].
 
     Retorna estimación de CdA y comparativa con referencias de literatura.
     """
+    if reference_powers_w is None:
+        reference_powers_w = [200, 250, 300]
     # Modelo empírico basado en ángulo de torso (principal driver del CdA en TT)
     # Regresión aproximada de datos de Defraeye et al. (2010) y Blocken et al. (2013)
     if torso_angle_deg <= 10:
@@ -93,7 +101,7 @@ def estimate_cda_from_position(
         hip_risk = "bajo"
 
     # Velocidad estimada con este CdA a distintas potencias (plano, nivel del mar)
-    def speed_from_power(power_w, cda, mass_kg=67, crr=CRR_TT_ROAD, rho=RHO_SEA_LEVEL):
+    def speed_from_power(power_w, cda, mass_kg=total_mass_kg, crr=CRR_TT_ROAD, rho=RHO_SEA_LEVEL):
         # Iteración numérica para resolver v de P = CdA*0.5*rho*v³ + Crr*m*g*v
         v = 10.0
         for _ in range(50):
@@ -121,9 +129,8 @@ def estimate_cda_from_position(
             "risk_level": hip_risk,
         },
         "speed_estimates_kmh": {
-            "at_250w": speed_from_power(250, cda_estimated),
-            "at_265w": speed_from_power(265, cda_estimated),
-            "at_278w": speed_from_power(278, cda_estimated),
+            f"at_{int(p)}w": speed_from_power(p, cda_estimated)
+            for p in reference_powers_w
         },
         "literature_references": {
             "Defraeye_et_al_2010": "CFD study of cyclist positions — base de los valores de referencia",
@@ -140,9 +147,9 @@ def estimate_cda_from_position(
 def calculate_cda_from_segment(
     power_watts: list[float],
     velocity_ms: list[float],
+    total_mass_kg: float,
     altitude_m: float = 0,
     temperature_c: float = 15,
-    total_mass_kg: float = 67.0,
     crr: float = CRR_TT_ROAD,
     grade_pct: float = 0.0,
 ) -> dict:
@@ -152,8 +159,9 @@ def calculate_cda_from_segment(
 
     power_watts: lista de potencias segundo a segundo (del stream de intervals)
     velocity_ms: lista de velocidades en m/s (del stream de intervals)
+    total_mass_kg: masa total del atleta + equipo (cuerpo + bici) en kg.
+                   Parámetro obligatorio — pasá tu masa real, no hay valor por defecto.
     altitude_m: altitud del segmento para cálculo de densidad de aire
-    total_mass_kg: masa total atleta + bici en kg
     crr: coeficiente de rodadura (0.0035 TT en asfalto liso)
     grade_pct: gradiente del segmento en % (0 = plano)
 
@@ -234,17 +242,19 @@ def compare_positions_cda(
     position_b_torso_deg: float,
     position_b_hip_deg: float,
     position_b_elbow_deg: float,
-    target_power_w: float = 265.0,
-    race_distance_km: float = 36.0,
-    total_mass_kg: float = 67.0,
+    target_power_w: float,
+    race_distance_km: float,
+    total_mass_kg: float,
 ) -> dict:
     """
     Compara dos configuraciones de posición en términos de CdA estimado,
     velocidad proyectada y tiempo estimado en carrera.
 
     Útil para comparar posición pre/post cambio de palanca o ajuste de fit.
-    race_distance_km: distancia de la prueba objetivo en km
-    target_power_w: potencia objetivo de carrera
+    target_power_w: potencia objetivo de carrera. Parámetro obligatorio.
+    race_distance_km: distancia de la prueba objetivo en km. Parámetro obligatorio.
+    total_mass_kg: masa total del atleta + equipo (cuerpo + bici) en kg.
+                   Parámetro obligatorio — pasá tu masa real, no hay valor por defecto.
     """
     def estimate_cda(torso, elbow):
         if torso <= 10: base = 0.195
@@ -257,7 +267,7 @@ def compare_positions_cda(
         )
         return round(base + elbow_corr, 4)
 
-    def speed_kmh(power, cda, mass=67, crr=CRR_TT_ROAD, rho=RHO_SEA_LEVEL):
+    def speed_kmh(power, cda, mass=total_mass_kg, crr=CRR_TT_ROAD, rho=RHO_SEA_LEVEL):
         v = 10.0
         for _ in range(50):
             p_calc = 0.5 * rho * cda * v**3 + crr * mass * G * v
@@ -310,22 +320,25 @@ def compare_positions_cda(
 
 def calculate_speed_from_power(
     power_w: float,
+    total_mass_kg: float,
     cda: float = None,
     grade_pct: float = 0.0,
     altitude_m: float = 0.0,
     temperature_c: float = 15.0,
-    total_mass_kg: float = 67.0,
     crr: float = CRR_TT_ROAD,
 ) -> dict:
     """
     Calcula velocidad esperada dado un nivel de potencia y CdA.
-    Si no se pasa CdA, usa la estimación de la posición actual del atleta (17° torso, 93° codos).
+    total_mass_kg: masa total del atleta + equipo (cuerpo + bici) en kg.
+                   Parámetro obligatorio — pasá tu masa real, no hay valor por defecto.
+    Si no se pasa CdA, usa un valor de referencia genérico de posición TT estándar
+    (ver CDA_REFERENCE["tt_standard"]). Para un CdA propio, usar estimate_cda_from_position
+    o calculate_cda_from_segment con tus datos reales.
     Útil para proyectar tiempos de carrera o segmentos.
     """
     if cda is None:
-        # Usar posición actual del atleta (del athlete_profile)
-        cda = 0.228  # 17° torso, 93° codos → estimación
-        cda_source = "Posición actual del atleta (torso 17°, codos 93°) — estimación"
+        cda = CDA_REFERENCE["tt_standard"]
+        cda_source = f"Valor de referencia genérico (TT estándar) — {cda} m². Para un CdA propio, usar estimate_cda_from_position o calculate_cda_from_segment."
     else:
         cda_source = "CdA provisto manualmente"
 

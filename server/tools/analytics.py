@@ -20,6 +20,7 @@ from datetime import date, timedelta
 from typing import Optional
 import httpx
 from server.config import settings
+from server.tools.fitness import get_sport_settings
 
 
 # ── Umbrales Z-Score para corrección HRV ────────────────────────────────────
@@ -37,6 +38,36 @@ POWER_ZONES = {
     "Z6": (120, 150),
     "Z7": (150, 999),
 }
+
+
+def _sport_settings_key(sport: str) -> str:
+    """Mapea el 'type' de actividad de intervals.icu al deporte de sport-settings."""
+    s = (sport or "").lower()
+    if "run" in s:
+        return "Run"
+    if "swim" in s:
+        return "Swim"
+    return "Ride"
+
+
+async def _resolve_ftp(sport: str) -> tuple[Optional[float], Optional[dict]]:
+    """
+    Obtiene el FTP configurado en intervals.icu para el deporte de la actividad.
+    Retorna (ftp, error_dict). Si no hay FTP configurado, ftp es None y error_dict
+    trae un mensaje explicativo para que el atleta lo configure.
+    """
+    sport_key = _sport_settings_key(sport)
+    sport_settings = await get_sport_settings(sport_key)
+    ftp = sport_settings.get("ftp")
+    if not ftp:
+        return None, {
+            "error": (
+                f"No hay FTP configurado en intervals.icu para '{sport_key}'. "
+                f"Configuralo en intervals.icu → Settings → {sport_key} → FTP, "
+                f"o pasá el parámetro ftp manualmente."
+            )
+        }
+    return ftp, None
 
 
 def _classify_zone(pct_ftp: float) -> str:
@@ -242,7 +273,7 @@ def _calc_ef_by_zone(work_intervals: list[dict]) -> dict:
 async def analyze_session(
     activity_id: str,
     session_type: Optional[str] = None,
-    ftp: float = 278.0,
+    ftp: Optional[float] = None,
 ) -> dict:
     """
     Análisis completo de una sesión: CCI por intervalo, EF por zona,
@@ -252,7 +283,10 @@ async def analyze_session(
     session_type: 'BIKE_FTP', 'BIKE_VO2', 'BIKE_STAMINA', 'RUN_FTP',
                   'RUN_VO2', 'RUN_LONG', 'RUN_T2', 'SWIM_RECOVERY', etc.
                   Si es None, el agente lo infiere del nombre de la actividad.
-    ftp: FTP actual del atleta (default 278W)
+    ftp: FTP del atleta en watts. Si no se especifica, se obtiene automáticamente
+         desde intervals.icu (sport-settings) según el deporte de la actividad.
+         Si el atleta no tiene FTP configurado en intervals.icu, la función
+         devuelve un error pidiendo que lo configure o lo pase manualmente.
 
     Retorna métricas completas listas para guardar en la BD con save_session_metrics.
     """
@@ -303,6 +337,12 @@ async def analyze_session(
     sport = activity.get("type", "")
     name = activity.get("name", "")
     duration_min = round((activity.get("moving_time") or 0) / 60, 1)
+
+    # 2b. Resolver FTP dinámicamente desde intervals.icu si no se pasó explícito
+    if ftp is None:
+        ftp, ftp_error = await _resolve_ftp(sport)
+        if ftp_error:
+            return ftp_error
 
     # 3. Inferir session_type si no se pasó
     if not session_type:
@@ -547,7 +587,7 @@ async def compare_sessions(
     session_type: Optional[str] = None,
     activity_ids: Optional[list[str]] = None,
     weeks: int = 8,
-    ftp: float = 278.0,
+    ftp: Optional[float] = None,
     max_sessions: Optional[int] = None,
 ) -> dict:
     """
@@ -558,6 +598,8 @@ async def compare_sessions(
     2. Por activity_ids → compara actividades específicas, sin límite de cantidad
 
     max_sessions: límite opcional (None = todas las que encuentre, sin límite)
+    ftp: FTP del atleta en watts. Si no se especifica, cada sesión resuelve su
+         propio FTP automáticamente desde intervals.icu (vía analyze_session).
     Detecta: mejora real / ruido por fatiga / plateau / caída.
     Retorna tendencia del CCI_normalizado con rolling average de 3 semanas.
     """
@@ -599,15 +641,21 @@ async def compare_sessions(
 
     # Analizar cada sesión — sin límite artificial por defecto
     sessions_data = []
+    errors = []
     for act_id in activities_to_analyze:
         try:
             result = await analyze_session(str(act_id), session_type, ftp)
+            if result.get("error"):
+                errors.append(result["error"])
+                continue
             if result.get("cci_avg"):
                 sessions_data.append(result)
         except Exception as e:
             continue
 
     if not sessions_data:
+        if errors:
+            return {"error": errors[0]}
         return {"error": "No se pudo calcular CCI para ninguna sesión — verificar que tengan potencia y FC"}
 
     # Ordenar por fecha
@@ -742,12 +790,14 @@ def _interpret_trend(trend: dict, sessions: list) -> str:
 async def get_session_ef_curve(
     session_type: str,
     weeks: int = 6,
-    ftp: float = 278.0,
+    ftp: Optional[float] = None,
 ) -> dict:
     """
     Genera la curva de EF por zona a lo largo del tiempo para un tipo de sesión.
     Muestra si la curva EF-potencia se desplaza semana a semana.
 
+    ftp: FTP del atleta en watts. Si no se especifica, se resuelve automáticamente
+         desde intervals.icu por sesión (vía compare_sessions → analyze_session).
     Ideal para fondos (BIKE_STAMINA, RUN_LONG) donde Z2 es la zona clave.
     """
     result = await compare_sessions(session_type=session_type, weeks=weeks, ftp=ftp)
