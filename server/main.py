@@ -1,7 +1,10 @@
 from pathlib import Path
 from fastmcp import FastMCP
 
-_prompt_path = Path(__file__).parent.parent / "SYSTEM_PROMPT.md"
+_project_root = Path(__file__).parent.parent
+_prompt_path = _project_root / "SYSTEM_PROMPT.md"
+if not _prompt_path.exists():
+    _prompt_path = _project_root / "SYSTEM_PROMPT.example.md"
 _instructions = _prompt_path.read_text(encoding="utf-8") if _prompt_path.exists() else ""
 
 mcp = FastMCP(name="intervals-icu-mcp", instructions=_instructions)
