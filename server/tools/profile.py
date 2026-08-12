@@ -2,13 +2,28 @@ import json
 from pathlib import Path
 from typing import Optional
 
-PROFILE_PATH = Path(__file__).parent.parent.parent / "athlete_profile.json"
+_PROJECT_ROOT = Path(__file__).parent.parent.parent
+PROFILE_PATH = _PROJECT_ROOT / "athlete_profile.json"
+EXAMPLE_PROFILE_PATH = _PROJECT_ROOT / "athlete_profile.example.json"
 
 
 def _load() -> dict:
-    if not PROFILE_PATH.exists():
-        return {"error": "athlete_profile.json no encontrado"}
-    return json.loads(PROFILE_PATH.read_text(encoding="utf-8"))
+    if PROFILE_PATH.exists():
+        return json.loads(PROFILE_PATH.read_text(encoding="utf-8"))
+    if EXAMPLE_PROFILE_PATH.exists():
+        data = json.loads(EXAMPLE_PROFILE_PATH.read_text(encoding="utf-8"))
+        data["_warning"] = (
+            "No existe athlete_profile.json — estás viendo athlete_profile.example.json (plantilla). "
+            "Copiá el ejemplo a athlete_profile.json y completá tus datos reales."
+        )
+        return data
+    return {
+        "error": (
+            "No se encontró athlete_profile.json ni athlete_profile.example.json. "
+            "Copiá athlete_profile.example.json a athlete_profile.json en la raíz del "
+            "proyecto y completá tus datos para usar esta herramienta."
+        )
+    }
 
 
 def _save(data: dict) -> None:
