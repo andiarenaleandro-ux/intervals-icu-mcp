@@ -183,9 +183,74 @@ intervals-icu-mcp/
 
 ## Customization
 
-- **`SYSTEM_PROMPT.md`** — copy `SYSTEM_PROMPT.example.md` (`install.py` does this automatically) and fill in the placeholders (`{ATHLETE_NAME}`, `{FTP}`, `{MAX_HR}`, etc.) with your data. This is where the agent's persona and the CCI/HRV interpretation rules live — those are universal, no need to touch them.
-- **`athlete_profile.json`** — copy `athlete_profile.example.json` and fill in your fitting (crank length, position angles), injury history, and training context. Used by `get_athlete_extended_profile` and the aerodynamics tools.
-- **`SESSION_POWER_THRESHOLD`** — in `server/tools/analytics.py`, defines the power threshold (% FTP) that separates a real work lap from warmup/recovery, per session type (`BIKE_FTP`, `RUN_LONG`, etc.). Adjust it if the way you structure sessions differs from the standard naming convention.
+### `SYSTEM_PROMPT.md`
+
+This file defines how Claude behaves as your sports analyst. Copy the example and replace the placeholders with your data.
+
+```bash
+cp SYSTEM_PROMPT.example.md SYSTEM_PROMPT.md   # install.py does this automatically
+```
+
+| Placeholder | What it is | Where to find it |
+|---|---|---|
+| `{ATHLETE_NAME}` | Your name | — |
+| `{LOCATION}` | Your city/country | — |
+| `{AGE}` | Your age | — |
+| `{DISCIPLINES}` | Sports you practice | e.g. "Triathlon and duathlon" |
+| `{MAIN_GOAL}` | Your target race/event | e.g. "Ironman 70.3 — September 2026" |
+| `{FTP}` | Functional Threshold Power (watts) | intervals.icu → Settings → Sport Settings → Ride → FTP |
+| `{WEIGHT}` | Body weight in kg | intervals.icu → Settings → Profile |
+| `{LTHR_BIKE}` | Lactate threshold HR (cycling) | intervals.icu → Sport Settings → Ride → LTHR |
+| `{LTHR_RUN}` | Lactate threshold HR (running) | intervals.icu → Sport Settings → Run → LTHR |
+| `{MAX_HR}` | Maximum heart rate | intervals.icu → Sport Settings → Ride → Max HR |
+| `{RESTING_HR}` | Resting heart rate | Your watch/wellness data |
+| `{BIKE_MODEL}` | Your bike model | e.g. "Cervélo P5" |
+| `{POWER_METER}` | Your power meter | e.g. "Stages L, Garmin Rally" |
+
+> If you don't know your FTP or LTHR, intervals.icu estimates them automatically from your training data. Check Sport Settings after a few weeks of recorded activities.
+
+> The interpretation rules (CCI, HRV correction, drift thresholds) are universal and don't need modification — they work for any athlete.
+
+### `athlete_profile.json`
+
+This file stores data that intervals.icu doesn't have: bike fitting, position angles, injury history, and training context. It's optional — the MCP works without it, but the aerodynamics and biomechanics tools need it for full analysis.
+
+```bash
+cp athlete_profile.example.json athlete_profile.json   # install.py does this automatically
+```
+
+The most important fields to fill in:
+
+- `equipment.bike.model` — your bike
+- `equipment.bike.power_meter` — your power meter
+- `bike_fit.crank_length_mm.current` — your current crank length in mm
+- `bike_fit.position_current` — your position angles (if you have them from a fit)
+- `physiology.ftp_w` — same as `{FTP}` above
+
+> Position angles (torso, hip, knee, elbow) are measured during a professional bike fit. If you haven't had one, leave them `null` — the aerodynamics tools will use literature reference values instead.
+
+> You can update this file anytime through Claude by saying "update my crank length to 165mm" — the agent writes to the file directly.
+
+### Session naming convention
+
+The analytics engine groups sessions by name to compare equivalent workouts week over week. Name your activities in intervals.icu using these standard prefixes for automatic detection:
+
+| Prefix | Session type | Example |
+|---|---|---|
+| `BIKE_FTP` | Cycling threshold intervals | "BIKE_FTP 4x8min" |
+| `BIKE_VO2` | Cycling VO2max intervals | "BIKE_VO2 5x3min" |
+| `BIKE_STAMINA` | Endurance/sweet spot ride | "BIKE_STAMINA 2h30" |
+| `RUN_FTP` | Running threshold intervals | "RUN_FTP 3x10min" |
+| `RUN_VO2` | Running VO2max intervals | "RUN_VO2 6x3min" |
+| `RUN_LONG` | Long endurance run | "RUN_LONG 90min" |
+| `RUN_T2` | Transition run (after bike) | "RUN_T2 15min" |
+| `SWIM_RECOVERY` | Easy swim | "SWIM_RECOVERY 45min" |
+| `SWIM_FTP` | Threshold swim | "SWIM_FTP CSS sets" |
+| `SWIM_VO2` | VO2max swim | "SWIM_VO2 8x100" |
+
+> This is optional. You can also compare sessions manually by providing activity IDs — the naming convention just enables automatic grouping.
+
+> The power threshold that separates a real work lap from warmup/recovery for each of these prefixes is `SESSION_POWER_THRESHOLD` in `server/tools/analytics.py`. Adjust it if the way you structure sessions differs from the standard convention.
 
 ---
 
