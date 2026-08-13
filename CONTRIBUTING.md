@@ -1,23 +1,23 @@
-# Contribuir a intervals-icu-mcp
+# Contributing to intervals-icu-mcp
 
-Gracias por el interés en contribuir. Este documento cubre cómo agregar un tool nuevo, reportar bugs y el flujo de pull requests.
+Thanks for your interest in contributing. This document covers how to add a new tool, how to report bugs, and the pull request workflow.
 
-## Cómo agregar un tool nuevo
+## How to add a new tool
 
-El patrón es simple — registrar un tool nuevo son tres pasos:
+The pattern is simple — registering a new tool takes three steps:
 
-1. **Creá la función async** en `server/tools/<modulo>.py` (o un módulo nuevo si no encaja en ninguno existente). Cada tool es una función async que llama a la API de intervals.icu con `httpx.AsyncClient()` y `settings.auth()`, o lee/escribe el estado local (SQLite, `athlete_profile.json`).
+1. **Create the async function** in `server/tools/<module>.py` (or a new module if it doesn't fit any existing one). Each tool is an async function that calls the intervals.icu API with `httpx.AsyncClient()` and `settings.auth()`, or reads/writes local state (SQLite, `athlete_profile.json`).
 
    ```python
-   async def get_algo(param: str) -> dict:
+   async def get_something(param: str) -> dict:
        """
-       Descripción corta de qué hace y cuándo usarlo.
-       param: qué espera este parámetro y en qué formato.
+       Short description of what it does and when to use it.
+       param: what this parameter expects and in what format.
        """
        settings.validate()
        async with httpx.AsyncClient() as client:
            r = await client.get(
-               f"{settings.base_url}/algo/{param}",
+               f"{settings.base_url}/something/{param}",
                auth=settings.auth(),
                timeout=15,
            )
@@ -25,37 +25,37 @@ El patrón es simple — registrar un tool nuevo son tres pasos:
        return r.json()
    ```
 
-2. **Importala en `server/main.py`**, junto con las demás funciones del mismo módulo.
+2. **Import it in `server/main.py`**, alongside the other functions from the same module.
 
-3. **Agregala a la lista de registro** en el loop `for fn in [...]` de `main.py`, bajo el comentario de categoría correspondiente (o uno nuevo si es una categoría nueva).
+3. **Add it to the registration list** in the `for fn in [...]` loop in `main.py`, under the matching category comment (or a new one if it's a new category).
 
-Eso es todo — `mcp.tool()(fn)` la expone automáticamente. No hay un registro central separado ni decoradores adicionales que mantener sincronizados.
+That's it — `mcp.tool()(fn)` exposes it automatically. There's no separate central registry or extra decorators to keep in sync.
 
-Si el tool nuevo agrega una categoría al README, actualizá también la tabla de tools y el conteo en la sección "Tools disponibles".
+If the new tool adds a category to the README, also update the tools table and the count in the "Available tools" section.
 
-## Cómo reportar bugs
+## How to report bugs
 
-Abrí un issue con:
-- Qué esperabas que pasara vs. qué pasó.
-- El tool o flujo involucrado (ej: `analyze_session` con una actividad sin FTP configurado).
-- El error completo si lo hay (traceback, no solo el mensaje final).
-- Versión de Python y sistema operativo.
+Open an issue with:
+- What you expected to happen vs. what actually happened.
+- The tool or flow involved (e.g., `analyze_session` on an activity with no FTP configured).
+- The full error if there is one (traceback, not just the final message).
+- Python version and operating system.
 
-No incluyas tu `INTERVALS_API_KEY`, `ATHLETE_ID` ni contenido de `athlete_profile.json`/`SYSTEM_PROMPT.md` en el issue — son datos personales, no hace falta para reproducir la mayoría de los bugs.
+Don't include your `INTERVALS_API_KEY`, `ATHLETE_ID`, or the contents of `athlete_profile.json`/`SYSTEM_PROMPT.md` in the issue — those are personal data, and they're not needed to reproduce most bugs.
 
-## Convenciones de código
+## Code conventions
 
-- **Async por defecto** para cualquier tool que hable con la API de intervals.icu — usa `httpx.AsyncClient()`, nunca `requests` ni llamadas síncronas bloqueantes.
-- **`settings.validate()`** al inicio de todo tool que dependa de credenciales, antes de la primera llamada HTTP.
-- **Docstrings descriptivos** — son lo que Claude lee para decidir cuándo usar el tool y cómo pasarle los parámetros. Explicá qué hace, el formato esperado de cada parámetro no obvio (fechas como `'YYYY-MM-DD'`, IDs, escalas 1-7 vs 1-10), y cuándo conviene usarlo sobre otro tool similar.
-- **Sin comentarios que expliquen el qué** — el código y los nombres ya lo dicen. Comentarios solo para el *por qué* cuando no es obvio (una regla de negocio no evidente, un workaround a una particularidad de la API de intervals.icu).
-- **No hardcodees datos personales** — FTP, LTHR, peso, nombre del atleta, fechas de carrera. Estos valores se leen de `.env`, `SYSTEM_PROMPT.md`, `athlete_profile.json` o se resuelven dinámicamente desde intervals.icu (ver `_resolve_ftp` en `analytics.py` como referencia).
-- **No hay tests automatizados todavía** — probá el tool corriendo el servidor y llamándolo desde Claude Desktop antes de abrir el PR.
+- **Async by default** for any tool that talks to the intervals.icu API — use `httpx.AsyncClient()`, never `requests` or blocking synchronous calls.
+- **`settings.validate()`** at the start of every tool that depends on credentials, before the first HTTP call.
+- **Descriptive docstrings** — these are what Claude reads to decide when to use the tool and how to pass its parameters. Explain what it does, the expected format for any non-obvious parameter (dates like `'YYYY-MM-DD'`, IDs, 1-7 vs. 1-10 scales), and when it's preferable over a similar tool.
+- **No comments explaining the what** — the code and the names already do that. Comments only for the *why* when it's not obvious (a non-evident business rule, a workaround for a quirk in the intervals.icu API).
+- **Don't hardcode personal data** — FTP, LTHR, weight, athlete name, race dates. These values are read from `.env`, `SYSTEM_PROMPT.md`, `athlete_profile.json`, or resolved dynamically from intervals.icu (see `_resolve_ftp` in `analytics.py` for reference).
+- **No automated tests yet** — test the tool by running the server and calling it from Claude Desktop before opening the PR.
 
 ## Pull requests
 
-1. Forkeá el repo.
-2. Creá una branch descriptiva: `git checkout -b feature/nombre-del-cambio` o `fix/bug-que-arregla`.
-3. Hacé el cambio siguiendo las convenciones de arriba.
-4. Verificá que el módulo compila (`python -m py_compile server/tools/tu_modulo.py`) y probá el flujo manualmente contra tu propia cuenta de intervals.icu.
-5. Abrí el PR contra `main` con una descripción de qué cambia y por qué. Si agrega un tool, mencioná en qué categoría del README debería listarse.
+1. Fork the repo.
+2. Create a descriptive branch: `git checkout -b feature/short-description` or `fix/bug-being-fixed`.
+3. Make the change following the conventions above.
+4. Verify the module compiles (`python -m py_compile server/tools/your_module.py`) and manually test the flow against your own intervals.icu account.
+5. Open the PR against `main` with a description of what changes and why. If it adds a tool, mention which README category it should be listed under.

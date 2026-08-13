@@ -15,8 +15,8 @@ class Settings:
     def validate(self):
         if not self.athlete_id or not self.api_key:
             raise ValueError(
-                "Faltan variables de entorno: INTERVALS_ATHLETE_ID y/o INTERVALS_API_KEY. "
-                "Copiá .env.example a .env y completá tus datos."
+                "Missing environment variables: INTERVALS_ATHLETE_ID and/or INTERVALS_API_KEY. "
+                "Copy .env.example to .env and fill in your data."
             )
 
 settings = Settings()

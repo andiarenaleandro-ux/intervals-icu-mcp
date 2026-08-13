@@ -1,8 +1,8 @@
 {
-  "_instructions": "Copiá este archivo a athlete_profile.json en la raíz del proyecto y completá los datos reales. athlete_profile.json queda ignorado por git (ver .gitignore) — tus datos personales nunca se suben al repositorio. Los campos '_comment' y '_comment_*' son solo documentación; podés borrarlos al completar el archivo, no los usa el código.",
+  "_instructions": "Copy this file to athlete_profile.json in the project root and fill in your real data. athlete_profile.json is ignored by git (see .gitignore) — your personal data never gets pushed to the repository. The '_comment' and '_comment_*' fields are documentation only; you can delete them once you fill in the file, the code doesn't use them.",
 
   "athlete": {
-    "_comment": "Datos personales básicos y objetivo principal de la temporada",
+    "_comment": "Basic personal data and main season goal",
     "name": "{ATHLETE_NAME}",
     "dob": "",
     "weight_kg": null,
@@ -12,7 +12,7 @@
   },
 
   "equipment": {
-    "_comment": "Equipamiento relevante para el análisis de aerodinámica y potencia",
+    "_comment": "Equipment relevant to aerodynamics and power analysis",
     "bike": {
       "model": "",
       "type": "",
@@ -24,7 +24,7 @@
   },
 
   "bike_fit": {
-    "_comment": "Fitting biomecánico de la bici. crank_length_mm.current y position_current son los datos que las tools de aerodinámica (estimate_cda_from_position, calculate_speed_from_power) usan como referencia de la posición actual.",
+    "_comment": "Bike biomechanical fitting. crank_length_mm.current and position_current are the data the aerodynamics tools (estimate_cda_from_position, calculate_speed_from_power) use as the current position reference.",
     "last_fit_date": "",
     "fitter": null,
     "crank_length_mm": {
@@ -68,7 +68,7 @@
       "elbow_angle_reference": ""
     },
     "position_delta": {
-      "_comment": "Diferencia entre position_current y position_previous. Se completa a mano o se deja que el agente la calcule.",
+      "_comment": "Difference between position_current and position_previous. Fill in by hand or let the agent calculate it.",
       "saddle_height_mm": "",
       "saddle_setback_mm": "",
       "reach_total_mm": "",
@@ -78,12 +78,12 @@
       "knee_angle_bottom_deg": "",
       "elbow_angle_aero_deg": ""
     },
-    "_comment_fit_history": "Historial de cambios de fitting con métricas antes/después. Formato de cada entrada (ver add_fit_history_entry): {date, change, position_before, position_after, metrics_before, metrics_after, notes}.",
+    "_comment_fit_history": "History of fitting changes with before/after metrics. Format of each entry (see add_fit_history_entry): {date, change, position_before, position_after, metrics_before, metrics_after, notes}.",
     "fit_history": []
   },
 
   "physiology": {
-    "_comment": "Métricas fisiológicas. Se pueden completar a mano o sincronizar con intervals.icu (get_sport_settings) — el FTP usado por analyze_session/compare_sessions ya se resuelve automáticamente desde intervals.icu si no se pasa como parámetro.",
+    "_comment": "Physiological metrics. Can be filled in by hand or synced with intervals.icu (get_sport_settings) — the FTP used by analyze_session/compare_sessions is already resolved automatically from intervals.icu if not passed as a parameter.",
     "ftp_w": null,
     "ftp_wpkg": null,
     "lthr_bike_bpm": null,
@@ -98,7 +98,7 @@
   },
 
   "biomechanics_notes": {
-    "_comment": "Notas de análisis biomecánico — se completan a medida que el agente o el atleta las generan tras cambios de posición o fitting.",
+    "_comment": "Biomechanical analysis notes — filled in as the agent or the athlete generates them after position or fitting changes.",
     "hip_angle_analysis": "",
     "torso_angle_analysis": "",
     "knee_angle_analysis": "",
@@ -106,20 +106,20 @@
     "key_insight": ""
   },
 
-  "_comment_injury_history": "Lista de lesiones o molestias. Formato de cada entrada (ver add_injury): {date, injury, body_part, recovery_weeks, status, notes}.",
+  "_comment_injury_history": "List of injuries or issues. Format of each entry (see add_injury): {date, injury, body_part, recovery_weeks, status, notes}.",
   "injury_history": [],
 
-  "_comment_mobility_limitations": "Lista de restricciones de movilidad relevantes para el fitting (ej: rigidez de cadera, asimetrías). Formato libre.",
+  "_comment_mobility_limitations": "List of mobility restrictions relevant to fitting (e.g., hip stiffness, asymmetries). Free format.",
   "mobility_limitations": [],
 
   "training_context": {
-    "_comment": "Contexto y preferencias de entrenamiento",
+    "_comment": "Training context and preferences",
     "preferred_long_ride_day": "",
-    "_comment_training_blocks": "Bloques de entrenamiento planificados. Formato libre (ej: {name, start_date, end_date, focus}).",
+    "_comment_training_blocks": "Planned training blocks. Free format (e.g., {name, start_date, end_date, focus}).",
     "training_blocks": []
   },
 
-  "_comment_race_history": "Historial de carreras: resultados, contexto y aprendizajes relevantes para próximos objetivos.",
+  "_comment_race_history": "Race history: results, context, and lessons relevant to upcoming goals.",
   "race_history": [],
 
   "notes": ""

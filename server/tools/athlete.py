@@ -4,7 +4,7 @@ from server.config import settings
 
 
 async def get_athlete_profile() -> dict:
-    """Perfil completo del atleta con FTP, LTHR, zonas y modelo MMP."""
+    """Full athlete profile with FTP, LTHR, zones, and MMP model."""
     settings.validate()
     async with httpx.AsyncClient() as client:
         r = await client.get(
@@ -54,7 +54,7 @@ async def get_athlete_profile() -> dict:
 
 
 async def get_upcoming_events(days: int = 90) -> list[dict]:
-    """Carreras y eventos tipo A/B/C en el calendario para los proximos N dias."""
+    """Type A/B/C races and events on the calendar for the next N days."""
     settings.validate()
     oldest = date.today().isoformat()
     newest = (date.today() + timedelta(days=days)).isoformat()
@@ -83,7 +83,7 @@ async def get_upcoming_events(days: int = 90) -> list[dict]:
 
 
 async def get_power_zones() -> dict:
-    """Zonas de potencia calculadas desde el FTP de ciclismo."""
+    """Power zones calculated from cycling FTP."""
     settings.validate()
     async with httpx.AsyncClient() as client:
         r = await client.get(
@@ -95,7 +95,7 @@ async def get_power_zones() -> dict:
     s = r.json()
     ftp = s.get("ftp")
     if not ftp:
-        return {"error": "FTP no configurado en intervals.icu"}
+        return {"error": "FTP not configured in intervals.icu"}
     return {
         "ftp_w": ftp,
         "zones": {

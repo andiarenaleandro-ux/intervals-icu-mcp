@@ -1,34 +1,34 @@
 """
-Herramientas de análisis aerodinámico para ciclismo TT.
-Basado en el modelo de potencia de ciclismo (Martin et al., 1998)
-y el método de elevación virtual (Chung, 2012).
+Aerodynamic analysis tools for TT cycling.
+Based on the cycling power model (Martin et al., 1998)
+and the virtual elevation method (Chung, 2012).
 """
 import math
 from typing import Optional
 from server.config import settings
 
 
-# ── Constantes físicas ──────────────────────────────────────────────────────
-RHO_SEA_LEVEL = 1.2256   # kg/m³ — densidad del aire a nivel del mar, 15°C
+# ── Physical constants ───────────────────────────────────────────────────────
+RHO_SEA_LEVEL = 1.2256   # kg/m³ — air density at sea level, 15°C
 G = 9.8067               # m/s²
-CRR_TT_ROAD = 0.0035     # coeficiente de resistencia a la rodadura (TT, asfalto liso)
-CRR_TT_ROUGH = 0.0042    # asfalto rugoso
+CRR_TT_ROAD = 0.0035     # rolling resistance coefficient (TT, smooth asphalt)
+CRR_TT_ROUGH = 0.0042    # rough asphalt
 
-# CdA de referencia por posición (Defraeye et al., 2010; Blocken et al., 2013)
-# Valores típicos de túnel de viento y CFD
+# Reference CdA by position (Defraeye et al., 2010; Blocken et al., 2013)
+# Typical wind tunnel and CFD values
 CDA_REFERENCE = {
-    "road_hoods":       0.388,  # manos en capuchas
-    "road_drops":       0.342,  # manos en bajantes
-    "road_aero":        0.307,  # agachado en bajantes
-    "tt_standard":      0.265,  # TT estándar, torso ~20-25°
-    "tt_aggressive":    0.230,  # TT agresivo, torso ~15-20°
-    "tt_very_aggressive": 0.210, # TT muy agresivo, torso < 15°
-    "tt_world_class":   0.185,  # Elite TT optimizado
+    "road_hoods":       0.388,  # hands on hoods
+    "road_drops":       0.342,  # hands on drops
+    "road_aero":        0.307,  # crouched on drops
+    "tt_standard":      0.265,  # standard TT, torso ~20-25°
+    "tt_aggressive":    0.230,  # aggressive TT, torso ~15-20°
+    "tt_very_aggressive": 0.210, # very aggressive TT, torso < 15°
+    "tt_world_class":   0.185,  # optimized elite TT
 }
 
 
 def _air_density(altitude_m: float = 0, temp_c: float = 15) -> float:
-    """Calcula densidad del aire según altitud y temperatura."""
+    """Calculates air density based on altitude and temperature."""
     pressure = 101325 * (1 - 0.0000226 * altitude_m) ** 5.256
     return pressure / (287.05 * (temp_c + 273.15))
 
@@ -42,67 +42,67 @@ def estimate_cda_from_position(
     frontal_area_notes: str = None,
 ) -> dict:
     """
-    Estima el CdA a partir de los ángulos de posición del atleta en la bici.
-    Usa modelos empíricos de la literatura (Defraeye et al., Blocken et al.).
+    Estimates CdA from the athlete's position angles on the bike.
+    Uses empirical models from the literature (Defraeye et al., Blocken et al.).
 
-    torso_angle_deg: ángulo del torso respecto a horizontal (menor = más aero)
-    hip_angle_deg: ángulo cadera en PMS entre torso y fémur
-    elbow_angle_deg: ángulo entre torso y húmero en posición aero
-    total_mass_kg: masa total del atleta + equipo (cuerpo + bici) en kg, usada
-                   para las estimaciones de velocidad. Parámetro obligatorio.
-    reference_powers_w: potencias (W) para las que se estima velocidad.
-                        Si no se pasa, usa valores genéricos [200, 250, 300].
+    torso_angle_deg: torso angle relative to horizontal (lower = more aero)
+    hip_angle_deg: hip angle at TDC between torso and femur
+    elbow_angle_deg: angle between torso and humerus in aero position
+    total_mass_kg: total mass of athlete + equipment (body + bike) in kg, used
+                   for the speed estimates. Required parameter.
+    reference_powers_w: power levels (W) at which speed is estimated.
+                        If not passed, uses generic values [200, 250, 300].
 
-    Retorna estimación de CdA y comparativa con referencias de literatura.
+    Returns the estimated CdA and a comparison against literature references.
     """
     if reference_powers_w is None:
         reference_powers_w = [200, 250, 300]
-    # Modelo empírico basado en ángulo de torso (principal driver del CdA en TT)
-    # Regresión aproximada de datos de Defraeye et al. (2010) y Blocken et al. (2013)
+    # Empirical model based on torso angle (main driver of CdA in TT)
+    # Approximate regression from Defraeye et al. (2010) and Blocken et al. (2013) data
     if torso_angle_deg <= 10:
         base_cda = 0.195
-        position_label = "Extremadamente agresivo (< 10°)"
+        position_label = "Extremely aggressive (< 10°)"
     elif torso_angle_deg <= 15:
         base_cda = 0.210
-        position_label = "Muy agresivo (10-15°)"
+        position_label = "Very aggressive (10-15°)"
     elif torso_angle_deg <= 20:
         base_cda = 0.228
-        position_label = "Agresivo TT (15-20°)"
+        position_label = "Aggressive TT (15-20°)"
     elif torso_angle_deg <= 25:
         base_cda = 0.248
-        position_label = "TT estándar (20-25°)"
+        position_label = "Standard TT (20-25°)"
     else:
         base_cda = 0.270 + (torso_angle_deg - 25) * 0.005
-        position_label = f"TT abierto ({torso_angle_deg}°)"
+        position_label = f"Open TT ({torso_angle_deg}°)"
 
-    # Corrección por ángulo de codos (apertura lateral aumenta CdA)
-    # Referencia: cada 10° de apertura de codos ≈ +0.005 m² (estimación)
+    # Correction for elbow angle (lateral flare increases CdA)
+    # Reference: each 10° of elbow flare ≈ +0.005 m² (estimate)
     if elbow_angle_deg < 85:
         elbow_correction = -0.005
-        elbow_note = "Codos muy cerrados — reducción adicional de CdA"
+        elbow_note = "Elbows very tucked — additional CdA reduction"
     elif elbow_angle_deg <= 100:
         elbow_correction = 0.0
-        elbow_note = "Codos en rango óptimo para TT (85-100°)"
+        elbow_note = "Elbows in optimal TT range (85-100°)"
     else:
         elbow_correction = (elbow_angle_deg - 100) * 0.0004
-        elbow_note = f"Codos abiertos — leve penalización aerodinámica"
+        elbow_note = f"Elbows flared — slight aerodynamic penalty"
 
     cda_estimated = round(base_cda + elbow_correction, 4)
 
-    # Análisis del ángulo de cadera
+    # Hip angle analysis
     if hip_angle_deg < 45:
-        hip_note = "Cadera muy cerrada — posible compromiso de potencia sostenida"
-        hip_risk = "alto"
+        hip_note = "Hip very closed — possible compromise to sustained power"
+        hip_risk = "high"
     elif hip_angle_deg <= 55:
-        hip_note = "Cadera en rango óptimo para TT (45-55°) según Bini et al."
-        hip_risk = "bajo"
+        hip_note = "Hip in optimal TT range (45-55°) per Bini et al."
+        hip_risk = "low"
     else:
-        hip_note = "Cadera abierta — buena para potencia, menor ganancia aerodinámica"
-        hip_risk = "bajo"
+        hip_note = "Open hip — good for power, less aerodynamic gain"
+        hip_risk = "low"
 
-    # Velocidad estimada con este CdA a distintas potencias (plano, nivel del mar)
+    # Estimated speed with this CdA at different power levels (flat, sea level)
     def speed_from_power(power_w, cda, mass_kg=total_mass_kg, crr=CRR_TT_ROAD, rho=RHO_SEA_LEVEL):
-        # Iteración numérica para resolver v de P = CdA*0.5*rho*v³ + Crr*m*g*v
+        # Numerical iteration to solve v for P = CdA*0.5*rho*v³ + Crr*m*g*v
         v = 10.0
         for _ in range(50):
             f_aero = 0.5 * rho * cda * v**3
@@ -133,9 +133,9 @@ def estimate_cda_from_position(
             for p in reference_powers_w
         },
         "literature_references": {
-            "Defraeye_et_al_2010": "CFD study of cyclist positions — base de los valores de referencia",
+            "Defraeye_et_al_2010": "CFD study of cyclist positions — basis for the reference values",
             "Blocken_et_al_2013": "Wind tunnel validation of CFD cyclist aerodynamics",
-            "Bini_et_al_2014": "Hip angle and power output in cycling — rango óptimo 45-55°",
+            "Bini_et_al_2014": "Hip angle and power output in cycling — optimal range 45-55°",
         },
         "reference_comparison": {
             k: {"cda": v, "delta": round(cda_estimated - v, 4)}
@@ -154,34 +154,34 @@ def calculate_cda_from_segment(
     grade_pct: float = 0.0,
 ) -> dict:
     """
-    Calcula CdA real de campo usando el método de Martin et al. (1998).
-    Requiere segmento plano o de gradiente conocido y constante.
+    Calculates real field CdA using the Martin et al. (1998) method.
+    Requires a flat segment or one with known, constant gradient.
 
-    power_watts: lista de potencias segundo a segundo (del stream de intervals)
-    velocity_ms: lista de velocidades en m/s (del stream de intervals)
-    total_mass_kg: masa total del atleta + equipo (cuerpo + bici) en kg.
-                   Parámetro obligatorio — pasá tu masa real, no hay valor por defecto.
-    altitude_m: altitud del segmento para cálculo de densidad de aire
-    crr: coeficiente de rodadura (0.0035 TT en asfalto liso)
-    grade_pct: gradiente del segmento en % (0 = plano)
+    power_watts: second-by-second power list (from the intervals stream)
+    velocity_ms: speed list in m/s (from the intervals stream)
+    total_mass_kg: total mass of athlete + equipment (body + bike) in kg.
+                   Required parameter — pass your real mass, there's no default.
+    altitude_m: segment altitude for air density calculation
+    crr: rolling resistance coefficient (0.0035 for TT on smooth asphalt)
+    grade_pct: segment gradient in % (0 = flat)
 
-    Retorna CdA estimado y métricas de calidad del segmento.
+    Returns the estimated CdA and segment quality metrics.
     """
     if len(power_watts) != len(velocity_ms):
-        return {"error": "Las listas de potencia y velocidad deben tener el mismo largo"}
+        return {"error": "The power and velocity lists must have the same length"}
     if len(power_watts) < 30:
-        return {"error": "Se necesitan al menos 30 segundos de datos para el cálculo"}
+        return {"error": "At least 30 seconds of data are needed for the calculation"}
 
     rho = _air_density(altitude_m, temperature_c)
     grade = grade_pct / 100.0
 
-    # Filtrar outliers (potencia 0 o velocidad < 5 m/s = 18 km/h)
+    # Filter outliers (power 0 or speed < 5 m/s = 18 km/h)
     pairs = [
         (p, v) for p, v in zip(power_watts, velocity_ms)
         if p > 0 and v > 5.0
     ]
     if len(pairs) < 20:
-        return {"error": "Datos insuficientes después de filtrar valores inválidos"}
+        return {"error": "Insufficient data after filtering invalid values"}
 
     cda_values = []
     for p, v in pairs:
@@ -191,11 +191,11 @@ def calculate_cda_from_segment(
         p_aero = p - p_roll - p_grav
         if p_aero > 0:
             cda = p_aero / (0.5 * rho * v**3)
-            if 0.10 < cda < 0.60:  # rango físicamente posible
+            if 0.10 < cda < 0.60:  # physically plausible range
                 cda_values.append(cda)
 
     if not cda_values:
-        return {"error": "No se pudo calcular CdA — verificar que el segmento sea plano y a velocidad sostenida"}
+        return {"error": "Could not calculate CdA — check that the segment is flat and at sustained speed"}
 
     cda_mean = sum(cda_values) / len(cda_values)
     cda_sorted = sorted(cda_values)
@@ -220,9 +220,9 @@ def calculate_cda_from_segment(
             "avg_power_w": round(avg_power, 1),
             "avg_speed_kmh": round(avg_speed_kmh, 1),
             "air_density_kgm3": round(rho, 4),
-            "note": "Mayor calidad con segmentos > 5min, viento calmo, gradiente < 0.5%"
+            "note": "Higher quality with segments > 5min, calm wind, gradient < 0.5%"
         },
-        "method": "Martin et al. (1998) — campo libre",
+        "method": "Martin et al. (1998) — free-field",
         "inputs": {
             "altitude_m": altitude_m,
             "temperature_c": temperature_c,
@@ -247,14 +247,14 @@ def compare_positions_cda(
     total_mass_kg: float,
 ) -> dict:
     """
-    Compara dos configuraciones de posición en términos de CdA estimado,
-    velocidad proyectada y tiempo estimado en carrera.
+    Compares two position setups in terms of estimated CdA,
+    projected speed, and estimated race time.
 
-    Útil para comparar posición pre/post cambio de palanca o ajuste de fit.
-    target_power_w: potencia objetivo de carrera. Parámetro obligatorio.
-    race_distance_km: distancia de la prueba objetivo en km. Parámetro obligatorio.
-    total_mass_kg: masa total del atleta + equipo (cuerpo + bici) en kg.
-                   Parámetro obligatorio — pasá tu masa real, no hay valor por defecto.
+    Useful for comparing position pre/post crank length change or fit adjustment.
+    target_power_w: target race power. Required parameter.
+    race_distance_km: target race distance in km. Required parameter.
+    total_mass_kg: total mass of athlete + equipment (body + bike) in kg.
+                   Required parameter — pass your real mass, there's no default.
     """
     def estimate_cda(torso, elbow):
         if torso <= 10: base = 0.195
@@ -313,7 +313,7 @@ def compare_positions_cda(
             "target_power_w": target_power_w,
             "race_distance_km": race_distance_km,
             "total_mass_kg": total_mass_kg,
-            "note": "CdA estimado por modelo empírico (Defraeye/Blocken). Para validación precisa usar velódromo o segmento controlado con método Chung.",
+            "note": "CdA estimated with an empirical model (Defraeye/Blocken). For precise validation, use a velodrome or a controlled segment with the Chung method.",
         },
     }
 
@@ -328,19 +328,19 @@ def calculate_speed_from_power(
     crr: float = CRR_TT_ROAD,
 ) -> dict:
     """
-    Calcula velocidad esperada dado un nivel de potencia y CdA.
-    total_mass_kg: masa total del atleta + equipo (cuerpo + bici) en kg.
-                   Parámetro obligatorio — pasá tu masa real, no hay valor por defecto.
-    Si no se pasa CdA, usa un valor de referencia genérico de posición TT estándar
-    (ver CDA_REFERENCE["tt_standard"]). Para un CdA propio, usar estimate_cda_from_position
-    o calculate_cda_from_segment con tus datos reales.
-    Útil para proyectar tiempos de carrera o segmentos.
+    Calculates expected speed given a power level and CdA.
+    total_mass_kg: total mass of athlete + equipment (body + bike) in kg.
+                   Required parameter — pass your real mass, there's no default.
+    If CdA isn't passed, uses a generic standard-TT-position reference value
+    (see CDA_REFERENCE["tt_standard"]). For your own CdA, use estimate_cda_from_position
+    or calculate_cda_from_segment with your real data.
+    Useful for projecting race or segment times.
     """
     if cda is None:
         cda = CDA_REFERENCE["tt_standard"]
-        cda_source = f"Valor de referencia genérico (TT estándar) — {cda} m². Para un CdA propio, usar estimate_cda_from_position o calculate_cda_from_segment."
+        cda_source = f"Generic reference value (standard TT) — {cda} m². For your own CdA, use estimate_cda_from_position or calculate_cda_from_segment."
     else:
-        cda_source = "CdA provisto manualmente"
+        cda_source = "CdA provided manually"
 
     rho = _air_density(altitude_m, temperature_c)
     grade = grade_pct / 100.0

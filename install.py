@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Instalador cross-platform: crea el venv, instala dependencias y prepara los archivos de config."""
+"""Cross-platform installer: creates the venv, installs dependencies, and prepares config files."""
 import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-# En Windows la consola suele usar cp1252, que no soporta ✓/→/✗ — forzamos UTF-8.
-# line_buffering evita que la salida de los subprocesos (pip, venv) se intercale
-# fuera de orden con los print() del script cuando la salida está redirigida.
+# Windows consoles usually default to cp1252, which doesn't support ✓/→/✗ — force UTF-8.
+# line_buffering prevents subprocess output (pip, venv) from interleaving out of
+# order with the script's print() calls when output is redirected.
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
@@ -22,16 +22,16 @@ MIN_PYTHON = (3, 10)
 def check_python_version(summary: list[str]) -> bool:
     if sys.version_info < MIN_PYTHON:
         v = sys.version_info
-        print(f"✗ Se requiere Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]} o superior (detectado: {v.major}.{v.minor}.{v.micro})")
-        print("  Instalá una versión compatible desde https://www.python.org/downloads/ y volvé a ejecutar este script.")
+        print(f"✗ Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]} or higher is required (detected: {v.major}.{v.minor}.{v.micro})")
+        print("  Install a compatible version from https://www.python.org/downloads/ and re-run this script.")
         return False
-    print(f"✓ Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro} detectado")
+    print(f"✓ Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro} detected")
     return True
 
 
 def venv_python(venv_dir: Path) -> Path:
-    # No usamos "activate" (difiere entre cmd/PowerShell/bash) — llamamos
-    # directamente al intérprete del venv, que tiene el mismo efecto.
+    # We don't use "activate" (it differs across cmd/PowerShell/bash) — we call
+    # the venv's interpreter directly, which has the same effect.
     if os.name == "nt":
         return venv_dir / "Scripts" / "python.exe"
     return venv_dir / "bin" / "python"
@@ -39,20 +39,20 @@ def venv_python(venv_dir: Path) -> Path:
 
 def create_venv(summary: list[str]) -> bool:
     if VENV_DIR.exists():
-        msg = "✓ Entorno virtual ya existe en .venv/ (sin modificar)"
+        msg = "✓ Virtual environment already exists at .venv/ (unchanged)"
         print(msg)
         summary.append(msg)
         return True
 
-    print("→ Creando entorno virtual en .venv/ ...")
+    print("→ Creating virtual environment at .venv/ ...")
     result = subprocess.run([sys.executable, "-m", "venv", str(VENV_DIR)])
     if result.returncode != 0:
-        msg = "✗ No se pudo crear el entorno virtual"
+        msg = "✗ Could not create the virtual environment"
         print(msg)
         summary.append(msg)
         return False
 
-    msg = "✓ Entorno virtual creado"
+    msg = "✓ Virtual environment created"
     print(msg)
     summary.append(msg)
     return True
@@ -60,27 +60,27 @@ def create_venv(summary: list[str]) -> bool:
 
 def install_dependencies(summary: list[str]) -> bool:
     if not REQUIREMENTS.exists():
-        msg = "✗ No se encontró requirements.txt — no se instalaron dependencias"
+        msg = "✗ requirements.txt not found — dependencies were not installed"
         print(msg)
         summary.append(msg)
         return False
 
     python_bin = venv_python(VENV_DIR)
     if not python_bin.exists():
-        msg = "✗ No se encontró el intérprete del entorno virtual — no se instalaron dependencias"
+        msg = "✗ Virtual environment interpreter not found — dependencies were not installed"
         print(msg)
         summary.append(msg)
         return False
 
-    print("→ Instalando dependencias desde requirements.txt (puede tardar unos minutos) ...")
+    print("→ Installing dependencies from requirements.txt (this may take a few minutes) ...")
     result = subprocess.run([str(python_bin), "-m", "pip", "install", "-r", str(REQUIREMENTS)])
     if result.returncode != 0:
-        msg = "✗ Falló la instalación de dependencias — revisá el error de pip arriba"
+        msg = "✗ Dependency installation failed — check the pip error above"
         print(msg)
         summary.append(msg)
         return False
 
-    msg = "✓ Dependencias instaladas"
+    msg = "✓ Dependencies installed"
     print(msg)
     summary.append(msg)
     return True
@@ -88,13 +88,13 @@ def install_dependencies(summary: list[str]) -> bool:
 
 def copy_if_missing(src: Path, dst: Path, summary: list[str]) -> None:
     if dst.exists():
-        msg = f"✓ {dst.name} ya existe (sin modificar)"
+        msg = f"✓ {dst.name} already exists (unchanged)"
         print(msg)
         summary.append(msg)
         return
 
     if not src.exists():
-        msg = f"✗ No se encontró {src.name} — no se pudo crear {dst.name}"
+        msg = f"✗ {src.name} not found — could not create {dst.name}"
         print(msg)
         summary.append(msg)
         return
@@ -102,19 +102,19 @@ def copy_if_missing(src: Path, dst: Path, summary: list[str]) -> None:
     try:
         shutil.copy(src, dst)
     except OSError as e:
-        msg = f"✗ No se pudo crear {dst.name}: {e}"
+        msg = f"✗ Could not create {dst.name}: {e}"
         print(msg)
         summary.append(msg)
         return
 
-    msg = f"✓ {dst.name} creado desde {src.name}"
+    msg = f"✓ {dst.name} created from {src.name}"
     print(msg)
     summary.append(msg)
 
 
 def ensure_dir(path: Path, summary: list[str]) -> None:
     if path.exists():
-        msg = f"✓ Carpeta {path.name}/ ya existe"
+        msg = f"✓ {path.name}/ folder already exists"
         print(msg)
         summary.append(msg)
         return
@@ -122,12 +122,12 @@ def ensure_dir(path: Path, summary: list[str]) -> None:
     try:
         path.mkdir(parents=True, exist_ok=True)
     except OSError as e:
-        msg = f"✗ No se pudo crear la carpeta {path.name}/: {e}"
+        msg = f"✗ Could not create the {path.name}/ folder: {e}"
         print(msg)
         summary.append(msg)
         return
 
-    msg = f"✓ Carpeta {path.name}/ creada"
+    msg = f"✓ {path.name}/ folder created"
     print(msg)
     summary.append(msg)
 
@@ -136,7 +136,7 @@ def main() -> None:
     summary: list[str] = []
 
     print("=" * 60)
-    print("  Instalación — intervals-icu-mcp")
+    print("  Installation — intervals-icu-mcp")
     print("=" * 60)
 
     if not check_python_version(summary):
@@ -153,15 +153,15 @@ def main() -> None:
     ensure_dir(ROOT / "fit_files", summary)
 
     pending = [
-        "→ Editá .env con tu ATHLETE_ID y API_KEY de intervals.icu",
-        "→ Personalizá SYSTEM_PROMPT.md con tu perfil de atleta",
-        "→ Completá athlete_profile.json con tus datos (opcional)",
-        "→ Ejecutá: python setup_claude.py para conectar con Claude Desktop",
+        "→ Edit .env with your intervals.icu ATHLETE_ID and API_KEY",
+        "→ Customize SYSTEM_PROMPT.md with your athlete profile",
+        "→ Fill in athlete_profile.json with your data (optional)",
+        "→ Run: python setup_claude.py to connect to Claude Desktop",
     ]
 
     print()
     print("=" * 60)
-    print("  Resumen")
+    print("  Summary")
     print("=" * 60)
     for line in summary:
         print(line)

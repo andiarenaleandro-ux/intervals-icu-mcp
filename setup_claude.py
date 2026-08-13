@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genera/actualiza la entrada 'intervals-icu' en claude_desktop_config.json."""
+"""Generates/updates the 'intervals-icu' entry in claude_desktop_config.json."""
 import json
 import os
 import platform
@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-# Mismo motivo que en install.py: cp1252 en consolas de Windows no soporta ✓/→/✗.
+# Same reason as in install.py: cp1252 in Windows consoles doesn't support ✓/→/✗.
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
@@ -31,9 +31,9 @@ def build_mcp_entry(python_bin: Path) -> dict:
 
 def _windows_store_fallback() -> Optional[Path]:
     """
-    Claude Desktop instalado desde Microsoft Store guarda su config en
-    Packages\\<PackageId>\\LocalCache\\Roaming\\Claude\\. El PackageId exacto
-    varía, así que buscamos cualquier carpeta que contenga 'Claude'.
+    Claude Desktop installed from the Microsoft Store stores its config in
+    Packages\\<PackageId>\\LocalCache\\Roaming\\Claude\\. The exact PackageId
+    varies, so we look for any folder containing 'Claude'.
     """
     local_appdata = os.environ.get("LOCALAPPDATA")
     if not local_appdata:
@@ -50,9 +50,9 @@ def _windows_store_fallback() -> Optional[Path]:
 
 def find_claude_config_path() -> tuple[Optional[Path], bool]:
     """
-    Retorna (ruta_del_config, instalado). 'instalado' es True si encontramos
-    el archivo de config o la carpeta donde Claude Desktop lo guardaría,
-    lo que indica que la app corrió al menos una vez en este sistema.
+    Returns (config_path, installed). 'installed' is True if we found
+    the config file or the folder where Claude Desktop would store it,
+    which indicates the app has run at least once on this system.
     """
     system = platform.system()
 
@@ -65,8 +65,8 @@ def find_claude_config_path() -> tuple[Optional[Path], bool]:
         store_path = _windows_store_fallback()
         if store_path is not None:
             return store_path, True
-        # No se encontró nada — devolvemos la ruta estándar como mejor palpito,
-        # pero marcada como "no instalado" para que el caller no intente escribir.
+        # Nothing found — return the standard path as our best guess,
+        # but flagged as "not installed" so the caller doesn't try to write.
         fallback = Path(appdata) / "Claude" / "claude_desktop_config.json" if appdata else None
         return fallback, False
 
@@ -75,7 +75,7 @@ def find_claude_config_path() -> tuple[Optional[Path], bool]:
         installed = candidate.exists() or candidate.parent.exists()
         return candidate, installed
 
-    # Linux y otros Unix
+    # Linux and other Unix systems
     xdg_config = os.environ.get("XDG_CONFIG_HOME")
     base = Path(xdg_config) if xdg_config else Path.home() / ".config"
     candidate = base / "Claude" / "claude_desktop_config.json"
@@ -89,35 +89,35 @@ def load_existing_config(config_path: Path) -> Optional[dict]:
     try:
         return json.loads(config_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as e:
-        print(f"✗ {config_path} existe pero no es JSON válido ({e}).")
-        print("  Revisalo manualmente antes de volver a correr este script.")
+        print(f"✗ {config_path} exists but is not valid JSON ({e}).")
+        print("  Review it manually before running this script again.")
         return None
 
 
 def main() -> None:
     print("=" * 60)
-    print("  Configurador de Claude Desktop — intervals-icu-mcp")
+    print("  Claude Desktop configurator — intervals-icu-mcp")
     print("=" * 60)
-    print(f"Sistema operativo detectado: {platform.system()}")
+    print(f"Detected operating system: {platform.system()}")
 
     python_bin = venv_python(ROOT / ".venv")
     if not python_bin.exists():
-        print("✗ No se encontró el entorno virtual (.venv).")
-        print("→ Ejecutá primero: python install.py")
+        print("✗ Virtual environment (.venv) not found.")
+        print("→ Run first: python install.py")
         sys.exit(1)
 
     entry = build_mcp_entry(python_bin)
 
     print()
-    print(f"Bloque de configuración generado para '{SERVER_NAME}':")
+    print(f"Configuration block generated for '{SERVER_NAME}':")
     print(json.dumps({SERVER_NAME: entry}, indent=2, ensure_ascii=False))
 
     config_path, installed = find_claude_config_path()
 
     if not installed or config_path is None:
         print()
-        print("✗ No se detectó Claude Desktop instalado.")
-        print("→ Instalalo desde claude.ai/download y después volvé a correr este script.")
+        print("✗ Claude Desktop was not detected.")
+        print("→ Install it from claude.ai/download and run this script again.")
         return
 
     existing = load_existing_config(config_path)
@@ -129,19 +129,19 @@ def main() -> None:
     existing["mcpServers"][SERVER_NAME] = entry
 
     print()
-    print(f"Config completo que se escribirá en:\n  {config_path}")
+    print(f"Full config that will be written to:\n  {config_path}")
     print(json.dumps(existing, indent=2, ensure_ascii=False))
 
-    answer = input(f"\n¿Escribir en {config_path}? (s/n): ").strip().lower()
-    if answer != "s":
-        print("→ Cancelado. No se modificó ningún archivo.")
+    answer = input(f"\nWrite to {config_path}? (y/n): ").strip().lower()
+    if answer != "y":
+        print("→ Cancelled. No file was modified.")
         return
 
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(json.dumps(existing, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    print("✓ Claude Desktop configurado")
-    print("→ Reiniciá Claude Desktop para activar el MCP")
+    print("✓ Claude Desktop configured")
+    print("→ Restart Claude Desktop to activate the MCP")
 
 
 if __name__ == "__main__":

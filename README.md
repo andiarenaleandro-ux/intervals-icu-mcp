@@ -1,6 +1,6 @@
 # intervals-icu-mcp
 
-**Servidor MCP que conecta Claude con tus datos de entrenamiento en intervals.icu — análisis fisiológico avanzado con IA**
+**MCP server that connects Claude to your training data on intervals.icu — advanced physiological analysis with AI**
 
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License MIT](https://img.shields.io/badge/license-MIT-green)
@@ -8,164 +8,164 @@
 
 ---
 
-## Qué es y para quién
+## What it is and who it's for
 
-`intervals-icu-mcp` expone tus datos de [intervals.icu](https://intervals.icu) — actividades, wellness, calendario, streams segundo a segundo — como herramientas invocables por Claude Desktop, más una capa de análisis fisiológico propio (CCI, corrección HRV, aerodinámica de campo) construida encima. Corre localmente: Claude Desktop se conecta al servidor vía [MCP](https://modelcontextprotocol.io) (stdio), y el servidor habla con la API de intervals.icu usando tu API key.
+`intervals-icu-mcp` exposes your [intervals.icu](https://intervals.icu) data — activities, wellness, calendar, second-by-second streams — as tools callable by Claude Desktop, plus a layer of proprietary physiological analysis (CCI, HRV correction, field aerodynamics) built on top. It runs locally: Claude Desktop connects to the server via [MCP](https://modelcontextprotocol.io) (stdio), and the server talks to the intervals.icu API using your API key.
 
-No es un dashboard más. Permite análisis que hoy no existen en ninguna plataforma de entrenamiento: separar fatiga simpática de mejora aeróbica real cruzando HRV Z-Score con potencia y FC, detectar cuándo el "costo cardíaco" bajo es en realidad supresión cardíaca y no eficiencia, o estimar tu CdA en el aire a partir de ángulos de posición sin pasar por un túnel de viento. Todo conversacional, en lenguaje natural, con memoria persistente entre sesiones.
+It's not just another dashboard. It enables analysis that doesn't exist today in any training platform: separating sympathetic fatigue from real aerobic improvement by cross-referencing HRV Z-Score with power and heart rate, detecting when a lower "cardiac cost" is actually cardiac suppression rather than efficiency, or estimating your CdA in the air from position angles without setting foot in a wind tunnel. All conversational, in natural language, with persistent memory across sessions.
 
 ---
 
 ## Quick start
 
-1. **Cloná el repo**
+1. **Clone the repo**
    ```bash
-   git clone https://github.com/<tu-usuario>/intervals-icu-mcp.git
+   git clone https://github.com/<your-username>/intervals-icu-mcp.git
    cd intervals-icu-mcp
    ```
 
-2. **Instalá todo con un comando**
+2. **Install everything with one command**
    ```bash
    python install.py
    ```
-   Crea el entorno virtual, instala las dependencias y copia los archivos de configuración de ejemplo (`.env`, `SYSTEM_PROMPT.md`, `athlete_profile.json`).
+   Creates the virtual environment, installs dependencies, and copies the example config files (`.env`, `SYSTEM_PROMPT.md`, `athlete_profile.json`).
 
-3. **Editá `.env`** con tus credenciales de intervals.icu:
-   - `INTERVALS_ATHLETE_ID` — se ve en la URL: `https://intervals.icu/athlete/i12345` → tu ID es `i12345`
-   - `INTERVALS_API_KEY` — generala en intervals.icu → **Settings → Developer Settings → API Key**
+3. **Edit `.env`** with your intervals.icu credentials:
+   - `INTERVALS_ATHLETE_ID` — visible in the URL: `https://intervals.icu/athlete/i12345` → your ID is `i12345`
+   - `INTERVALS_API_KEY` — generate it in intervals.icu → **Settings → Developer Settings → API Key**
 
-4. **Conectá Claude Desktop automáticamente**
+4. **Connect Claude Desktop automatically**
    ```bash
    python setup_claude.py
    ```
-   Detecta tu sistema operativo, encuentra `claude_desktop_config.json` y agrega la entrada del servidor sin tocar el resto de tu configuración (otros MCPs quedan intactos). Te muestra el JSON antes de escribir y pide confirmación.
+   Detects your operating system, finds `claude_desktop_config.json`, and adds the server entry without touching the rest of your configuration (other MCPs stay intact). Shows you the JSON before writing and asks for confirmation.
 
-5. **Reiniciá Claude Desktop.** Debería aparecer el ícono de herramientas con los tools de `intervals-icu` disponibles.
-
----
-
-## Features principales
-
-- **Full CRUD de intervals.icu** — actividades, wellness, calendario, sport settings.
-- **Streams segundo a segundo** — potencia, FC, cadencia, velocidad, altitud, para análisis fino.
-- **Análisis de archivos `.fit` locales** — sin depender de que la actividad esté subida a intervals.icu.
-- **CCI (Cardiac Cost Index)** — métrica propia de eficiencia cardíaca (`FC / %FTP`) que separa trabajo real de laps de recuperación.
-- **Corrección HRV Z-Score** — distingue fatiga simpática de adaptación real cuando el CCI baja.
-- **Matriz Freshness Ratio (HRV × TSB)** — 4 cuadrantes clínicos (fresco, carga óptima, sobrecarga aguda, fatiga no funcional) en vez de mirar el TSB aislado.
-- **Detección de supresión cardíaca** — identifica cuándo una FC baja es agotamiento del SNA, no mejora de eficiencia.
-- **Aerodinámica** — CdA estimado por posición y CdA real de campo (método Martin et al., 1998).
-- **Perfil biomecánico persistente** — historial de fitting, ángulos de posición, lesiones, contexto de entrenamiento.
-- **Memoria SQLite local** — snapshots semanales y por sesión para tendencias longitudinales sin regastar tokens en refetch.
+5. **Restart Claude Desktop.** The tools icon should appear with the `intervals-icu` tools available.
 
 ---
 
-## Tools disponibles (48)
+## Main features
 
-### Actividades (7)
-| Tool | Descripción |
-|---|---|
-| `get_recent_activities` | Actividades de los últimos N días con todos los KPIs de intervals.icu |
-| `get_activity_detail` | Detalle completo de una actividad por ID, incluyendo intervalos y streams |
-| `get_activity_streams` | Streams segundo a segundo (potencia, FC, cadencia, velocidad, altitud) |
-| `get_activity_intervals` | Laps/intervalos de una actividad |
-| `get_activities_by_sport` | Filtra actividades por deporte (Ride, Run, Swim, ...) en los últimos N días |
-| `create_manual_activity` | Crea una actividad manual en intervals.icu |
-| `update_activity` | Actualiza nombre, descripción, RPE o feel de una actividad existente |
+- **Full CRUD for intervals.icu** — activities, wellness, calendar, sport settings.
+- **Second-by-second streams** — power, heart rate, cadence, speed, elevation, for fine-grained analysis.
+- **Local `.fit` file analysis** — no need for the activity to be uploaded to intervals.icu.
+- **CCI (Cardiac Cost Index)** — proprietary cardiac efficiency metric (`HR / %FTP`) that separates real work from recovery laps.
+- **HRV Z-Score correction** — distinguishes sympathetic fatigue from real adaptation when CCI drops.
+- **Freshness Ratio matrix (HRV × TSB)** — 4 clinical quadrants (fresh, optimal load, acute overload, non-functional overreaching) instead of looking at TSB in isolation.
+- **Cardiac suppression detection** — identifies when a lower heart rate is autonomic nervous system exhaustion, not improved efficiency.
+- **Aerodynamics** — estimated CdA from position and real field CdA (Martin et al. 1998 method).
+- **Persistent biomechanical profile** — fitting history, position angles, injuries, training context.
+- **Local SQLite memory** — weekly and per-session snapshots for longitudinal trends without re-spending tokens on refetches.
 
-### Fitness y zonas (4)
-| Tool | Descripción |
+---
+
+## Available tools (48)
+
+### Activities (7)
+| Tool | Description |
 |---|---|
-| `get_fitness_stats` | Histórico de CTL/ATL/TSB de los últimos N días |
-| `get_current_fitness` | Snapshot actual de CTL/ATL/TSB con interpretación |
-| `get_sport_settings` | Configuración completa de zonas y FTP para un deporte |
-| `update_sport_settings` | Actualiza FTP o LTHR para un deporte en intervals.icu |
+| `get_recent_activities` | Activities from the last N days with all intervals.icu KPIs |
+| `get_activity_detail` | Full detail of an activity by ID, including intervals and streams |
+| `get_activity_streams` | Second-by-second streams (power, HR, cadence, speed, elevation) |
+| `get_activity_intervals` | Laps/intervals of an activity |
+| `get_activities_by_sport` | Filters activities by sport (Ride, Run, Swim, ...) over the last N days |
+| `create_manual_activity` | Creates a manual activity in intervals.icu |
+| `update_activity` | Updates name, description, RPE, or feel of an existing activity |
+
+### Fitness & zones (4)
+| Tool | Description |
+|---|---|
+| `get_fitness_stats` | CTL/ATL/TSB history for the last N days |
+| `get_current_fitness` | Current CTL/ATL/TSB snapshot with interpretation |
+| `get_sport_settings` | Full zone and FTP configuration for a sport |
+| `update_sport_settings` | Updates FTP or LTHR for a sport in intervals.icu |
 
 ### Wellness (3)
-| Tool | Descripción |
+| Tool | Description |
 |---|---|
-| `get_wellness` | HRV, FC reposo, sueño, peso, fatiga subjetiva de los últimos N días |
-| `get_today_wellness` | Registro de wellness de hoy |
-| `update_wellness` | Registra o actualiza wellness para una fecha específica |
+| `get_wellness` | HRV, resting HR, sleep, weight, subjective fatigue for the last N days |
+| `get_today_wellness` | Today's wellness record |
+| `update_wellness` | Records or updates wellness for a specific date |
 
-### Perfil del atleta (3)
-| Tool | Descripción |
+### Athlete profile (3)
+| Tool | Description |
 |---|---|
-| `get_athlete_profile` | Perfil completo con FTP, LTHR, zonas y modelo MMP |
-| `get_upcoming_events` | Carreras y eventos tipo A/B/C en el calendario |
-| `get_power_zones` | Zonas de potencia calculadas desde el FTP de ciclismo |
+| `get_athlete_profile` | Full profile with FTP, LTHR, zones, and MMP model |
+| `get_upcoming_events` | Type A/B/C races and events on the calendar |
+| `get_power_zones` | Power zones calculated from cycling FTP |
 
-### Calendario (7)
-| Tool | Descripción |
+### Calendar (7)
+| Tool | Description |
 |---|---|
-| `get_planned_workouts` | Workouts planificados para los próximos N días |
-| `get_todays_plan` | Todos los eventos de hoy: workouts, notas y targets |
-| `get_calendar_events` | Eventos del calendario en un rango de fechas |
-| `create_workout` | Crea un evento/workout en el calendario |
-| `create_weekly_plan` | Crea múltiples workouts de una sola vez |
-| `update_event` | Modifica un evento existente del calendario |
-| `delete_event` | Elimina un evento del calendario |
+| `get_planned_workouts` | Planned workouts for the next N days |
+| `get_todays_plan` | All of today's events: workouts, notes, and targets |
+| `get_calendar_events` | Calendar events over a date range |
+| `create_workout` | Creates an event/workout on the calendar |
+| `create_weekly_plan` | Creates multiple workouts at once |
+| `update_event` | Modifies an existing calendar event |
+| `delete_event` | Deletes a calendar event |
 
-### Archivos .fit (3)
-| Tool | Descripción |
+### .fit files (3)
+| Tool | Description |
 |---|---|
-| `list_fit_files` | Lista los archivos `.fit` disponibles en `fit_files/` |
-| `analyze_fit_file` | Análisis detallado: potencia, picos 1/5/20/60min, FC, cadencia, zonas |
-| `get_fit_raw_summary` | Explora los tipos de mensaje y campos disponibles de un `.fit` |
+| `list_fit_files` | Lists the `.fit` files available in `fit_files/` |
+| `analyze_fit_file` | Detailed analysis: power, 1/5/20/60min peaks, HR, cadence, zones |
+| `get_fit_raw_summary` | Explores the message types and fields available in a `.fit` file |
 
-### Perfil extendido (5)
-| Tool | Descripción |
+### Extended profile (5)
+| Tool | Description |
 |---|---|
-| `get_athlete_extended_profile` | Perfil biomecánico: fitting, ángulos, historial, lesiones, contexto |
-| `update_bike_fit` | Actualiza los datos de fitting de la bici en el perfil local |
-| `add_fit_history_entry` | Registra un cambio de fitting con métricas antes/después |
-| `add_injury` | Registra una lesión o molestia en el historial |
-| `update_training_notes` | Actualiza las notas generales del perfil del atleta |
+| `get_athlete_extended_profile` | Biomechanical profile: fitting, angles, history, injuries, context |
+| `update_bike_fit` | Updates the bike fitting data in the local profile |
+| `add_fit_history_entry` | Records a fitting change with before/after metrics |
+| `add_injury` | Records an injury or issue in the history |
+| `update_training_notes` | Updates the athlete's general profile notes |
 
-### Aerodinámica (4)
-| Tool | Descripción |
+### Aerodynamics (4)
+| Tool | Description |
 |---|---|
-| `estimate_cda_from_position` | Estima el CdA a partir de ángulos de torso, cadera y codo |
-| `calculate_cda_from_segment` | CdA real de campo — método de Martin et al. (1998) |
-| `compare_positions_cda` | Compara dos posiciones en CdA, velocidad y tiempo de carrera proyectado |
-| `calculate_speed_from_power` | Velocidad esperada dado un nivel de potencia y CdA |
+| `estimate_cda_from_position` | Estimates CdA from torso, hip, and elbow angles |
+| `calculate_cda_from_segment` | Real field CdA — Martin et al. (1998) method |
+| `compare_positions_cda` | Compares two positions in CdA, speed, and projected race time |
+| `calculate_speed_from_power` | Expected speed given a power level and CdA |
 
-### Análisis avanzado (3)
-| Tool | Descripción |
+### Advanced analytics (3)
+| Tool | Description |
 |---|---|
-| `analyze_session` | CCI por intervalo, EF por zona, HR drift, corrección HRV por Z-Score |
-| `compare_sessions` | Compara N sesiones equivalentes para detectar tendencias de adaptación |
-| `get_session_ef_curve` | Curva de EF por zona a lo largo del tiempo para un tipo de sesión |
+| `analyze_session` | CCI per interval, EF by zone, HR drift, HRV Z-Score correction |
+| `compare_sessions` | Compares N equivalent sessions to detect adaptation trends |
+| `get_session_ef_curve` | EF-by-zone curve over time for a session type |
 
-### Memoria y tendencias (9)
-| Tool | Descripción |
+### Memory & trends (9)
+| Tool | Description |
 |---|---|
-| `save_weekly_snapshot` | Guarda o actualiza el snapshot semanal de KPIs en SQLite |
-| `get_kpi_trends` | Tendencias de KPIs de las últimas N semanas desde la BD local |
-| `get_kpi_alerts` | Alertas de KPIs activas o resueltas |
-| `save_kpi_alert` | Registra una alerta de KPI en la BD |
-| `save_agent_note` | Guarda una observación o insight persistente del agente |
-| `get_agent_notes` | Recupera notas del agente de los últimos N días |
-| `get_weekly_snapshot` | Trae el snapshot de una semana específica |
-| `save_session_metrics` | Guarda el resultado de `analyze_session` en la BD local |
-| `get_session_history` | Historial de CCI/EF desde la BD local, con tendencia calculada |
+| `save_weekly_snapshot` | Saves or updates the weekly KPI snapshot in SQLite |
+| `get_kpi_trends` | KPI trends for the last N weeks from the local DB |
+| `get_kpi_alerts` | Active or resolved KPI alerts |
+| `save_kpi_alert` | Records a KPI alert in the DB |
+| `save_agent_note` | Saves a persistent observation or insight from the agent |
+| `get_agent_notes` | Retrieves agent notes from the last N days |
+| `get_weekly_snapshot` | Fetches the snapshot for a specific week |
+| `save_session_metrics` | Saves the result of `analyze_session` in the local DB |
+| `get_session_history` | CCI/EF history from the local DB, with calculated trend |
 
 ---
 
-## Estructura del proyecto
+## Project structure
 
 ```
 intervals-icu-mcp/
-├── install.py                     ← Instalador: venv + dependencias + config
-├── setup_claude.py                ← Configura Claude Desktop automáticamente
+├── install.py                     ← Installer: venv + dependencies + config
+├── setup_claude.py                ← Configures Claude Desktop automatically
 ├── requirements.txt
-├── .env.example                   ← Plantilla de credenciales
-├── SYSTEM_PROMPT.example.md       ← Plantilla del rol/persona del agente
-├── athlete_profile.example.json   ← Plantilla del perfil biomecánico
-├── fit_files/                     ← Tus archivos .fit locales
-├── db/                            ← SQLite (se crea automáticamente)
+├── .env.example                   ← Credentials template
+├── SYSTEM_PROMPT.example.md       ← Agent role/persona template
+├── athlete_profile.example.json   ← Biomechanical profile template
+├── fit_files/                     ← Your local .fit files
+├── db/                            ← SQLite (created automatically)
 └── server/
-    ├── main.py                    ← Entry point: registra todos los tools
-    ├── config.py                  ← Configuración (lee .env)
+    ├── main.py                    ← Entry point: registers all tools
+    ├── config.py                  ← Configuration (reads .env)
     └── tools/
         ├── activities.py
         ├── fitness.py
@@ -181,49 +181,49 @@ intervals-icu-mcp/
 
 ---
 
-## Personalización
+## Customization
 
-- **`SYSTEM_PROMPT.md`** — copiá `SYSTEM_PROMPT.example.md` (lo hace `install.py` automáticamente) y completá los placeholders (`{ATHLETE_NAME}`, `{FTP}`, `{MAX_HR}`, etc.) con tus datos. Ahí vive la persona del agente y las reglas de interpretación de CCI/HRV — son universales, no hace falta tocarlas.
-- **`athlete_profile.json`** — copiá `athlete_profile.example.json` y completá tu fitting (largo de palanca, ángulos de posición), historial de lesiones y contexto de entrenamiento. Lo usan `get_athlete_extended_profile` y las tools de aerodinámica.
-- **`SESSION_POWER_THRESHOLD`** — en `server/tools/analytics.py`, define el umbral de potencia (% FTP) que separa un lap de trabajo real de calentamiento/recuperación, por tipo de sesión (`BIKE_FTP`, `RUN_LONG`, etc.). Ajustalo si tu forma de estructurar sesiones difiere de la nomenclatura estándar.
-
----
-
-## Ejemplos de consultas
-
-```
-"Mostrame mis actividades de la última semana"
-"Analizá mi última sesión de FTP — quiero el CCI y el drift"
-"Compará mis últimos 4 BIKE_FTP y decime si estoy mejorando"
-"Estimá mi CdA con la posición actual"
-"¿Cómo está mi CTL de cara a mi próxima carrera?"
-```
+- **`SYSTEM_PROMPT.md`** — copy `SYSTEM_PROMPT.example.md` (`install.py` does this automatically) and fill in the placeholders (`{ATHLETE_NAME}`, `{FTP}`, `{MAX_HR}`, etc.) with your data. This is where the agent's persona and the CCI/HRV interpretation rules live — those are universal, no need to touch them.
+- **`athlete_profile.json`** — copy `athlete_profile.example.json` and fill in your fitting (crank length, position angles), injury history, and training context. Used by `get_athlete_extended_profile` and the aerodynamics tools.
+- **`SESSION_POWER_THRESHOLD`** — in `server/tools/analytics.py`, defines the power threshold (% FTP) that separates a real work lap from warmup/recovery, per session type (`BIKE_FTP`, `RUN_LONG`, etc.). Adjust it if the way you structure sessions differs from the standard naming convention.
 
 ---
 
-## Tecnología
+## Example queries
+
+```
+"Show me my activities from the last week"
+"Analyze my last FTP session — I want the CCI and the drift"
+"Compare my last 4 BIKE_FTP sessions and tell me if I'm improving"
+"Estimate my CdA with my current position"
+"How's my CTL looking ahead of my next race?"
+```
+
+---
+
+## Technology
 
 - **Stack:** Python 3.10+, [FastMCP](https://github.com/jlowin/fastmcp), `httpx`, `fitparse`, SQLite
-- **Protocolo:** [MCP (Model Context Protocol)](https://modelcontextprotocol.io)
-- **Transporte:** stdio (local) — cada usuario corre su propio servidor, sin backend compartido
+- **Protocol:** [MCP (Model Context Protocol)](https://modelcontextprotocol.io)
+- **Transport:** stdio (local) — each user runs their own server, no shared backend
 
 ---
 
-## Limitaciones
+## Limitations
 
-- Requiere Claude Desktop (o cualquier cliente MCP compatible con stdio).
-- Un usuario = un atleta (single-tenant); no está pensado para múltiples atletas en la misma instancia.
-- Sin tests automatizados ni CI.
-- Sin deploy remoto — corre localmente, no hay versión hosteada.
-
----
-
-## Contribuciones
-
-¿Querés agregar un tool, arreglar un bug o mejorar el análisis? Mirá [CONTRIBUTING.md](CONTRIBUTING.md) para el flujo de trabajo y las convenciones del proyecto.
+- Requires Claude Desktop (or any MCP client compatible with stdio).
+- One user = one athlete (single-tenant); not designed for multiple athletes on the same instance.
+- No automated tests or CI.
+- No remote deployment — runs locally, no hosted version.
 
 ---
 
-## Licencia
+## Contributing
+
+Want to add a tool, fix a bug, or improve the analysis? Check out [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and project conventions.
+
+---
+
+## License
 
 [MIT](LICENSE)

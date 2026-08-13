@@ -5,8 +5,8 @@ from server.config import settings
 
 async def get_fitness_stats(days: int = 42) -> list[dict]:
     """
-    Historico de CTL/ATL/TSB de los ultimos N dias desde wellness.
-    Default 42 dias para ver tendencia de 6 semanas.
+    CTL/ATL/TSB history for the last N days from wellness.
+    Default 42 days to see a 6-week trend.
     """
     settings.validate()
     oldest = (date.today() - timedelta(days=days)).isoformat()
@@ -33,7 +33,7 @@ async def get_fitness_stats(days: int = 42) -> list[dict]:
 
 
 async def get_current_fitness() -> dict:
-    """Snapshot actual de CTL/ATL/TSB con interpretacion."""
+    """Current CTL/ATL/TSB snapshot with interpretation."""
     settings.validate()
     for target in [date.today().isoformat(), (date.today() - timedelta(days=1)).isoformat()]:
         async with httpx.AsyncClient() as client:
@@ -51,14 +51,14 @@ async def get_current_fitness() -> dict:
                     "ctl": round(ctl, 1) if ctl else None,
                     "atl": round(atl, 1) if atl else None,
                     "tsb": round(tsb, 1) if tsb else None,
-                    "interpretacion": _interpret_tsb(tsb or 0),
+                    "interpretation": _interpret_tsb(tsb or 0),
                 }
-    return {"error": "No se encontraron datos de CTL/ATL en intervals.icu"}
+    return {"error": "No CTL/ATL data found in intervals.icu"}
 
 
 async def get_sport_settings(sport: str = "Ride") -> dict:
     """
-    Configuracion completa de zonas y FTP para un deporte.
+    Full zone and FTP configuration for a sport.
     sport: 'Ride', 'Run', 'Swim'
     """
     settings.validate()
@@ -88,7 +88,7 @@ async def update_sport_settings(
     lthr: int = None,
 ) -> dict:
     """
-    Actualiza FTP o LTHR para un deporte en intervals.icu.
+    Updates FTP or LTHR for a sport in intervals.icu.
     sport: 'Ride', 'Run', 'Swim'
     """
     settings.validate()
@@ -111,12 +111,12 @@ async def update_sport_settings(
 
 def _interpret_tsb(tsb: float) -> str:
     if tsb > 25:
-        return "Muy fresco — riesgo de perdida de forma, considera cargar"
+        return "Very fresh — risk of losing fitness, consider adding load"
     elif tsb > 5:
-        return "Fresco — buenas condiciones para competir o sesion de calidad"
+        return "Fresh — good conditions to race or do a quality session"
     elif tsb >= -10:
-        return "En zona productiva — carga y adaptacion en equilibrio"
+        return "Productive zone — load and adaptation in balance"
     elif tsb >= -25:
-        return "Fatigado — seguir con plan pero monitorear recuperacion"
+        return "Fatigued — keep following the plan but monitor recovery"
     else:
-        return "Muy fatigado — evaluar reduccion de carga o recuperacion activa"
+        return "Very fatigued — consider reducing load or active recovery"

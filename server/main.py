@@ -81,7 +81,7 @@ for fn in [
     save_agent_note, get_agent_notes,
     get_weekly_snapshot,
     save_session_metrics, get_session_history,
-    # Analytics (CCI, EF por zona, tendencias)
+    # Analytics (CCI, EF by zone, trends)
     analyze_session, compare_sessions, get_session_ef_curve,
 ]:
     mcp.tool()(fn)

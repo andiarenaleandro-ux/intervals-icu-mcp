@@ -13,15 +13,15 @@ def _load() -> dict:
     if EXAMPLE_PROFILE_PATH.exists():
         data = json.loads(EXAMPLE_PROFILE_PATH.read_text(encoding="utf-8"))
         data["_warning"] = (
-            "No existe athlete_profile.json — estás viendo athlete_profile.example.json (plantilla). "
-            "Copiá el ejemplo a athlete_profile.json y completá tus datos reales."
+            "athlete_profile.json doesn't exist — you're viewing athlete_profile.example.json (template). "
+            "Copy the example to athlete_profile.json and fill in your real data."
         )
         return data
     return {
         "error": (
-            "No se encontró athlete_profile.json ni athlete_profile.example.json. "
-            "Copiá athlete_profile.example.json a athlete_profile.json en la raíz del "
-            "proyecto y completá tus datos para usar esta herramienta."
+            "Neither athlete_profile.json nor athlete_profile.example.json were found. "
+            "Copy athlete_profile.example.json to athlete_profile.json in the project "
+            "root and fill in your data to use this tool."
         )
     }
 
@@ -35,15 +35,15 @@ def _save(data: dict) -> None:
 
 def get_athlete_extended_profile() -> dict:
     """
-    Trae el perfil extendido del atleta con datos que intervals.icu no tiene:
-    - Datos de fitting y posicion en bici
-    - Largo de palanca actual y objetivo
-    - Angulos de torso, cadera, rodilla
-    - Historial de cambios de fit con impacto en metricas
-    - Lesiones y limitaciones de movilidad
-    - Contexto de bloques de entrenamiento
-    - Historial de carreras
-    Usar siempre que el analisis involucre biomecanica, eficiencia o fitting.
+    Fetches the athlete's extended profile with data that intervals.icu doesn't have:
+    - Bike fitting and position data
+    - Current and target crank length
+    - Torso, hip, knee angles
+    - History of fit changes with metric impact
+    - Injuries and mobility limitations
+    - Training block context
+    - Race history
+    Always use when the analysis involves biomechanics, efficiency, or fitting.
     """
     return _load()
 
@@ -63,11 +63,11 @@ def update_bike_fit(
     notes: Optional[str] = None,
 ) -> dict:
     """
-    Actualiza los datos de fitting de la bici en el perfil local.
-    Usar cuando el atleta reporte un cambio de posicion, nuevo fitting,
-    o actualizacion de angulos tras analisis de video.
-    crank_change_status: 'pendiente', 'en_proceso', 'completado'
-    notes: se guarda en crank_length_mm.adaptation_notes
+    Updates the bike fitting data in the local profile.
+    Use when the athlete reports a position change, a new fitting,
+    or an angle update after video analysis.
+    crank_change_status: 'pending', 'in_progress', 'completed'
+    notes: saved to crank_length_mm.adaptation_notes
     """
     data = _load()
     if "error" in data:
@@ -114,11 +114,11 @@ def add_fit_history_entry(
     notes: Optional[str] = None,
 ) -> dict:
     """
-    Registra un cambio de fitting con metricas antes/despues.
+    Records a fitting change with before/after metrics.
     change_date: 'YYYY-MM-DD'
-    metrics_before/after: dict con valores relevantes, ej:
+    metrics_before/after: dict with relevant values, e.g.:
       {"avg_power_w": 265, "decoupling_pct": 6.2, "ef": 1.45}
-    Permite al agente comparar impacto real de cambios de posicion.
+    Lets the agent compare the real impact of position changes.
     """
     data = _load()
     if "error" in data:
@@ -132,8 +132,8 @@ def add_fit_history_entry(
         "notes": notes,
     }
     history = data["bike_fit"].get("fit_history", [])
-    # Filtrar el entry vacío inicial si existe
-    history = [h for h in history if h.get("change") != "Configuración inicial" or h.get("date")]
+    # Filter out the initial empty entry if present
+    history = [h for h in history if h.get("change") != "Initial configuration" or h.get("date")]
     history.append(entry)
     data["bike_fit"]["fit_history"] = history
 
@@ -146,12 +146,12 @@ def add_injury(
     injury_description: str,
     body_part: str,
     recovery_weeks: Optional[int] = None,
-    status: str = "activa",
+    status: str = "active",
     notes: Optional[str] = None,
 ) -> dict:
     """
-    Registra una lesion o molestia en el historial.
-    status: 'activa', 'recuperado', 'cronico'
+    Records an injury or issue in the history.
+    status: 'active', 'healed', 'chronic'
     """
     data = _load()
     if "error" in data:
@@ -175,9 +175,9 @@ def add_injury(
 
 def update_training_notes(notes: str) -> dict:
     """
-    Actualiza las notas generales del perfil del atleta.
-    Usar para registrar observaciones del agente sobre tendencias,
-    patrones detectados, o recomendaciones a largo plazo.
+    Updates the athlete's general profile notes.
+    Use to record agent observations about trends,
+    detected patterns, or long-term recommendations.
     """
     data = _load()
     if "error" in data:

@@ -6,8 +6,8 @@ from server.config import settings
 
 async def get_planned_workouts(days: int = 7) -> list[dict]:
     """
-    Trae los workouts planificados en el calendario (category=WORKOUT)
-    para los proximos N dias.
+    Fetches the workouts planned on the calendar (category=WORKOUT)
+    for the next N days.
     """
     settings.validate()
     oldest = date.today().isoformat()
@@ -22,7 +22,7 @@ async def get_planned_workouts(days: int = 7) -> list[dict]:
         r.raise_for_status()
     events = r.json()
     if not events:
-        return [{"message": f"No hay workouts planificados en los proximos {days} dias"}]
+        return [{"message": f"No workouts planned for the next {days} days"}]
     return [
         {
             "id": e.get("id"),
@@ -43,7 +43,7 @@ async def get_planned_workouts(days: int = 7) -> list[dict]:
 
 async def get_todays_plan() -> dict:
     """
-    Trae todos los eventos de hoy: workouts, notas y targets.
+    Fetches all of today's events: workouts, notes, and targets.
     """
     settings.validate()
     today = date.today().isoformat()
@@ -57,7 +57,7 @@ async def get_todays_plan() -> dict:
         r.raise_for_status()
     events = r.json()
     if not events:
-        return {"date": today, "message": "No hay nada planificado para hoy"}
+        return {"date": today, "message": "Nothing planned for today"}
     return {
         "date": today,
         "sessions": [
@@ -78,9 +78,9 @@ async def get_todays_plan() -> dict:
 
 async def get_calendar_events(oldest: str, newest: str, category: str = None) -> list[dict]:
     """
-    Trae eventos del calendario en un rango de fechas.
+    Fetches calendar events over a date range.
     oldest/newest: 'YYYY-MM-DD'
-    category: 'WORKOUT', 'NOTE', 'TARGET', 'RACE' (None = todos)
+    category: 'WORKOUT', 'NOTE', 'TARGET', 'RACE' (None = all)
     """
     settings.validate()
     params = {"oldest": oldest, "newest": newest}
@@ -106,7 +106,7 @@ async def create_workout(
     category: str = "WORKOUT",
 ) -> dict:
     """
-    Crea un evento/workout en el calendario de intervals.icu.
+    Creates an event/workout on the intervals.icu calendar.
     start_date_local: 'YYYY-MM-DDTHH:MM:SS'
     category: 'WORKOUT', 'NOTE', 'TARGET', 'RACE'
     sport_type: 'Ride', 'Run', 'Swim', etc.
@@ -138,9 +138,9 @@ async def create_workout(
 
 async def create_weekly_plan(workouts: list[dict]) -> list[dict]:
     """
-    Crea multiples workouts en el calendario de una sola vez.
-    Cada workout debe tener: name, start_date_local, category (opcional), description (opcional).
-    Ejemplo: [{"name": "Fondo Z2", "start_date_local": "2026-05-12T08:00:00", "description": "2h Z2"}]
+    Creates multiple workouts on the calendar in a single call.
+    Each workout must have: name, start_date_local, category (optional), description (optional).
+    Example: [{"name": "Z2 Endurance", "start_date_local": "2026-05-12T08:00:00", "description": "2h Z2"}]
     """
     settings.validate()
     payload = [
@@ -171,7 +171,7 @@ async def update_event(
     description: Optional[str] = None,
 ) -> dict:
     """
-    Modifica un evento existente del calendario por su ID.
+    Modifies an existing calendar event by its ID.
     """
     settings.validate()
     payload = {}
@@ -193,8 +193,8 @@ async def update_event(
 
 async def delete_event(event_id: str) -> dict:
     """
-    Elimina un evento del calendario por su ID.
-    Usar con cuidado — la accion es irreversible.
+    Deletes a calendar event by its ID.
+    Use with caution — this action is irreversible.
     """
     settings.validate()
     async with httpx.AsyncClient() as client:

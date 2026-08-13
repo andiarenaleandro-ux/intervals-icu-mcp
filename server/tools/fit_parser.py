@@ -11,8 +11,8 @@ def _get_fit_dir() -> Path:
 
 def list_fit_files() -> list[str]:
     """
-    Lista todos los archivos .fit disponibles en la carpeta fit_files/.
-    Usá los nombres que devuelve esta función para llamar a analyze_fit_file.
+    Lists all .fit files available in the fit_files/ folder.
+    Use the names returned by this function to call analyze_fit_file.
     """
     fit_dir = _get_fit_dir()
     files = sorted(fit_dir.glob("*.fit"), key=lambda f: f.stat().st_mtime, reverse=True)
@@ -22,15 +22,15 @@ def list_fit_files() -> list[str]:
 
 def analyze_fit_file(filename: str) -> dict:
     """
-    Analiza un archivo .fit en detalle.
-    Retorna: duración, distancia, potencia media/máx/NP, picos de 1/5/20 min,
-    FC media/máx, cadencia, elevación, distribución por zonas (aproximada).
-    Ideal para revisar una sesión en profundidad.
+    Analyzes a .fit file in detail.
+    Returns: duration, distance, avg/max/NP power, 1/5/20min peaks,
+    avg/max HR, cadence, elevation, zone distribution (approximate).
+    Ideal for reviewing a session in depth.
     """
     try:
         import fitparse
     except ImportError:
-        return {"error": "fitparse no está instalado. Ejecutá: pip install fitparse"}
+        return {"error": "fitparse is not installed. Run: pip install fitparse"}
 
     fit_dir = _get_fit_dir()
     path = fit_dir / filename
@@ -38,8 +38,8 @@ def analyze_fit_file(filename: str) -> dict:
     if not path.exists():
         available = [f.name for f in fit_dir.glob("*.fit")]
         return {
-            "error": f"Archivo '{filename}' no encontrado.",
-            "disponibles": available,
+            "error": f"File '{filename}' not found.",
+            "available": available,
         }
 
     fitfile = fitparse.FitFile(str(path))
@@ -56,20 +56,20 @@ def analyze_fit_file(filename: str) -> dict:
             laps.append(data)
 
     if not records:
-        return {"error": "El archivo .fit no contiene datos de actividad"}
+        return {"error": "The .fit file contains no activity data"}
 
-    # --- Extraer series temporales ---
+    # --- Extract time series ---
     powers = [r["power"] for r in records if "power" in r and r["power"] is not None]
     hrs = [r["heart_rate"] for r in records if "heart_rate" in r]
     cadences = [r["cadence"] for r in records if "cadence" in r]
     speeds = [r["speed"] for r in records if "speed" in r]
     altitudes = [r["altitude"] for r in records if "altitude" in r]
 
-    # --- Potencia normalizada (NP) ---
+    # --- Normalized power (NP) ---
     def calc_np(power_list: list) -> float | None:
         if len(power_list) < 30:
             return None
-        # Rolling average 30s → elevar a 4ta potencia → media → raíz 4ta
+        # 30s rolling average → raise to 4th power → mean → 4th root
         window = 30
         rolling = []
         for i in range(len(power_list) - window):
@@ -89,7 +89,7 @@ def analyze_fit_file(filename: str) -> dict:
         )
         return round(best, 1)
 
-    # --- Elevación ganada ---
+    # --- Elevation gain ---
     elevation_gain = 0.0
     if len(altitudes) > 1:
         for i in range(1, len(altitudes)):
@@ -97,7 +97,7 @@ def analyze_fit_file(filename: str) -> dict:
             if diff > 0:
                 elevation_gain += diff
 
-    # --- Resumen de laps ---
+    # --- Lap summary ---
     laps_summary = []
     for i, lap in enumerate(laps, 1):
         laps_summary.append({
@@ -110,11 +110,11 @@ def analyze_fit_file(filename: str) -> dict:
             "avg_cadence": lap.get("avg_cadence"),
         })
 
-    # --- Resultado final ---
+    # --- Final result ---
     result = {
         "filename": filename,
         "total_records": len(records),
-        "duration_min": round(len(records) / 60, 1),  # Asume 1 sample/seg
+        "duration_min": round(len(records) / 60, 1),  # Assumes 1 sample/sec
         "laps_count": len(laps),
     }
 
@@ -148,7 +148,7 @@ def analyze_fit_file(filename: str) -> dict:
             "avg_kmh": round(avg_speed_ms * 3.6, 1),
             "max_kmh": round(max(speeds) * 3.6, 1),
         }
-        result["distance_km"] = round(sum(speeds), 2) / 1000  # Aproximación
+        result["distance_km"] = round(sum(speeds), 2) / 1000  # Approximation
 
     if altitudes:
         result["elevation_gain_m"] = round(elevation_gain, 1)
@@ -162,19 +162,19 @@ def analyze_fit_file(filename: str) -> dict:
 
 def get_fit_raw_summary(filename: str) -> dict:
     """
-    Trae un resumen de los tipos de mensajes y campos disponibles en el .fit.
-    Útil para explorar qué datos tiene el archivo antes de analizarlo en detalle.
+    Fetches a summary of the message types and fields available in the .fit file.
+    Useful for exploring what data the file has before analyzing it in detail.
     """
     try:
         import fitparse
     except ImportError:
-        return {"error": "fitparse no está instalado"}
+        return {"error": "fitparse is not installed"}
 
     fit_dir = _get_fit_dir()
     path = fit_dir / filename
 
     if not path.exists():
-        return {"error": f"Archivo '{filename}' no encontrado"}
+        return {"error": f"File '{filename}' not found"}
 
     fitfile = fitparse.FitFile(str(path))
 

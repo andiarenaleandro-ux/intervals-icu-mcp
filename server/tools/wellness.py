@@ -6,8 +6,8 @@ from server.config import settings
 
 async def get_wellness(days: int = 14) -> list[dict]:
     """
-    Trae datos de wellness de los ultimos N dias.
-    Incluye HRV, FC reposo, sueno, peso, fatiga subjetiva, estado de animo.
+    Fetches wellness data for the last N days.
+    Includes HRV, resting HR, sleep, weight, subjective fatigue, mood.
     """
     settings.validate()
     oldest = (date.today() - timedelta(days=days)).isoformat()
@@ -43,7 +43,7 @@ async def get_wellness(days: int = 14) -> list[dict]:
 
 
 async def get_today_wellness() -> dict:
-    """Trae el registro de wellness de hoy."""
+    """Fetches today's wellness record."""
     settings.validate()
     today = date.today().isoformat()
     async with httpx.AsyncClient() as client:
@@ -53,7 +53,7 @@ async def get_today_wellness() -> dict:
             timeout=15,
         )
     if r.status_code == 404:
-        return {"date": today, "message": "Sin registro de wellness para hoy"}
+        return {"date": today, "message": "No wellness record for today"}
     r.raise_for_status()
     e = r.json()
     return {
@@ -88,10 +88,10 @@ async def update_wellness(
     notes: Optional[str] = None,
 ) -> dict:
     """
-    Registra o actualiza datos de wellness para una fecha.
-    target_date: formato 'YYYY-MM-DD'
-    fatigue, soreness, mood, motivation: escala 1-7
-    sleep_hours: horas de sueno
+    Records or updates wellness data for a date.
+    target_date: format 'YYYY-MM-DD'
+    fatigue, soreness, mood, motivation: 1-7 scale
+    sleep_hours: hours of sleep
     """
     settings.validate()
     payload: dict = {"id": target_date}

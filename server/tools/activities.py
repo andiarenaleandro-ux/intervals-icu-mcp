@@ -13,26 +13,26 @@ def _clean_activity(a: dict) -> dict:
         "duration_min": round(a.get("moving_time", 0) / 60, 1),
         "distance_km": round((a.get("distance") or 0) / 1000, 2),
         "elevation_m": a.get("total_elevation_gain"),
-        # Carga
+        # Load
         "tss": a.get("icu_training_load"),
         "intensity_factor": a.get("icu_intensity"),
-        # Potencia
+        # Power
         "avg_power_w": a.get("average_watts"),
         "normalized_power_w": a.get("icu_weighted_avg_watts"),
         "variability_index": a.get("icu_variability_index"),
-        # FC
+        # HR
         "avg_hr_bpm": a.get("average_heartrate"),
         "max_hr_bpm": a.get("max_heartrate"),
-        # KPIs aeróbicos — ya calculados por intervals
+        # Aerobic KPIs — already calculated by intervals
         "efficiency_factor": a.get("icu_efficiency_factor"),
         "aerobic_decoupling": a.get("icu_aerobic_decoupling"),
-        # Distribución de zonas
+        # Zone distribution
         "zone_times": a.get("icu_zone_times"),
         "hr_zone_times": a.get("icu_hr_zone_times"),
-        # Forma en el momento de la actividad
+        # Form at the time of the activity
         "ctl_at_activity": a.get("icu_ctl"),
         "atl_at_activity": a.get("icu_atl"),
-        # Running dynamics (si aplica)
+        # Running dynamics (if applicable)
         "avg_cadence": a.get("average_cadence"),
         "avg_stride_length": a.get("average_stride_length"),
         "avg_vertical_oscillation": a.get("average_vertical_oscillation"),
@@ -62,7 +62,7 @@ FIELDS = ",".join([
 
 
 async def get_recent_activities(days: int = 7) -> list[dict]:
-    """Trae actividades de los ultimos N dias con todos los KPIs de intervals."""
+    """Fetches activities from the last N days with all intervals KPIs."""
     settings.validate()
     oldest = (date.today() - timedelta(days=days)).isoformat()
     async with httpx.AsyncClient() as client:
@@ -77,7 +77,7 @@ async def get_recent_activities(days: int = 7) -> list[dict]:
 
 
 async def get_activity_detail(activity_id: str) -> dict:
-    """Detalle completo de una actividad por ID incluyendo intervals y streams."""
+    """Full detail of an activity by ID, including intervals and streams."""
     settings.validate()
     async with httpx.AsyncClient() as client:
         r = await client.get(
@@ -95,7 +95,7 @@ async def get_activity_streams(
     types: str = "watts,heart_rate,cadence,velocity_smooth,altitude"
 ) -> dict:
     """
-    Streams segundo a segundo de una actividad.
+    Second-by-second streams of an activity.
     types: watts, heart_rate, cadence, velocity_smooth, altitude,
            distance, latlng, temp, left_pedal_smoothness, left_torque_effectiveness
     """
@@ -112,7 +112,7 @@ async def get_activity_streams(
 
 
 async def get_activity_intervals(activity_id: str) -> list[dict]:
-    """Laps/intervalos de una actividad. Util para series estructuradas."""
+    """Laps/intervals of an activity. Useful for structured sets."""
     settings.validate()
     async with httpx.AsyncClient() as client:
         r = await client.get(
@@ -126,7 +126,7 @@ async def get_activity_intervals(activity_id: str) -> list[dict]:
 
 async def get_activities_by_sport(sport_type: str, days: int = 30) -> list[dict]:
     """
-    Filtra actividades por deporte en los ultimos N dias.
+    Filters activities by sport over the last N days.
     sport_type: 'Ride', 'Run', 'Swim', 'VirtualRide', 'TrailRun'
     """
     settings.validate()
@@ -156,7 +156,7 @@ async def create_manual_activity(
     trainer: bool = False,
 ) -> dict:
     """
-    Crea una actividad manual en intervals.icu.
+    Creates a manual activity in intervals.icu.
     start_date_local: 'YYYY-MM-DDTHH:MM:SS'
     """
     settings.validate()
@@ -192,8 +192,8 @@ async def update_activity(
     feel: Optional[int] = None,
 ) -> dict:
     """
-    Actualiza campos de una actividad existente.
-    perceived_exertion y feel: escala 1-10.
+    Updates fields of an existing activity.
+    perceived_exertion and feel: 1-10 scale.
     """
     settings.validate()
     payload = {}

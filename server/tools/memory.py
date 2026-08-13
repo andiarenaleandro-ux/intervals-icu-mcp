@@ -1,7 +1,7 @@
 """
-Motor de memoria persistente para análisis de tendencias.
-Guarda snapshots semanales de KPIs en SQLite local.
-El agente escribe aquí después de cada análisis y lee para detectar tendencias.
+Persistent memory engine for trend analysis.
+Saves weekly KPI snapshots to local SQLite.
+The agent writes here after each analysis and reads to detect trends.
 """
 import sqlite3
 import json
@@ -26,16 +26,16 @@ def _init_db(conn: sqlite3.Connection):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             week_start TEXT NOT NULL UNIQUE,
             sport TEXT NOT NULL DEFAULT 'Ride',
-            -- Carga
+            -- Load
             tss_total REAL,
             hours_total REAL,
             sessions_count INTEGER,
-            -- KPIs aeróbicos (promedio de sesiones de ese deporte esa semana)
+            -- Aerobic KPIs (average of that sport's sessions that week)
             ef_avg REAL,
             ef_z2_avg REAL,
             decoupling_avg REAL,
             vi_avg REAL,
-            -- Forma
+            -- Form
             ctl_end REAL,
             atl_end REAL,
             tsb_end REAL,
@@ -43,7 +43,7 @@ def _init_db(conn: sqlite3.Connection):
             hrv_avg REAL,
             sleep_avg REAL,
             resting_hr_avg REAL,
-            -- Potencia
+            -- Power
             peak_1min_w REAL,
             peak_5min_w REAL,
             peak_20min_w REAL,
@@ -112,10 +112,10 @@ def save_weekly_snapshot(
     notes: Optional[str] = None,
 ) -> dict:
     """
-    Guarda o actualiza el snapshot semanal de KPIs.
-    week_start: lunes de la semana en formato 'YYYY-MM-DD'
+    Saves or updates the weekly KPI snapshot.
+    week_start: Monday of the week, format 'YYYY-MM-DD'
     sport: 'Ride', 'Run', 'Swim'
-    Llamar después de analizar una semana para persistir los KPIs calculados.
+    Call after analyzing a week to persist the calculated KPIs.
     """
     conn = _get_conn()
     conn.execute("""
@@ -175,10 +175,10 @@ def get_kpi_trends(
     metrics: Optional[list[str]] = None,
 ) -> dict:
     """
-    Trae tendencias de KPIs de las últimas N semanas desde la BD local.
-    Detecta automáticamente si un KPI está mejorando, estable o cayendo.
+    Fetches KPI trends for the last N weeks from the local DB.
+    Automatically detects whether a KPI is improving, stable, or declining.
     sport: 'Ride', 'Run'
-    metrics: lista opcional de métricas a filtrar (None = todas)
+    metrics: optional list of metrics to filter (None = all)
     """
     conn = _get_conn()
     rows = conn.execute("""
@@ -191,7 +191,7 @@ def get_kpi_trends(
 
     if not rows:
         return {
-            "message": f"Sin datos en BD para {sport}. Usar save_weekly_snapshot para comenzar a registrar.",
+            "message": f"No data in DB for {sport}. Use save_weekly_snapshot to start recording.",
             "weeks_requested": weeks,
         }
 
@@ -200,16 +200,16 @@ def get_kpi_trends(
     def trend(values: list) -> str:
         clean = [v for v in values if v is not None]
         if len(clean) < 3:
-            return "insuficiente"
+            return "insufficient"
         recent = sum(clean[-3:]) / 3
         older = sum(clean[:3]) / 3
         delta_pct = ((recent - older) / older * 100) if older else 0
         if delta_pct > 3:
-            return f"↑ mejora ({delta_pct:+.1f}%)"
+            return f"↑ improving ({delta_pct:+.1f}%)"
         elif delta_pct < -3:
-            return f"↓ caída ({delta_pct:+.1f}%)"
+            return f"↓ declining ({delta_pct:+.1f}%)"
         else:
-            return f"→ estable ({delta_pct:+.1f}%)"
+            return f"→ stable ({delta_pct:+.1f}%)"
 
     all_metrics = ["ef_avg", "ef_z2_avg", "decoupling_avg", "vi_avg",
                    "ctl_end", "tsb_end", "peak_5min_w", "peak_20min_w",
@@ -244,8 +244,8 @@ def get_kpi_trends(
 
 def get_kpi_alerts(resolved: bool = False) -> list[dict]:
     """
-    Trae alertas de KPIs activas (o resueltas si resolved=True).
-    Las alertas se generan automáticamente cuando un KPI cruza un umbral.
+    Fetches active KPI alerts (or resolved ones if resolved=True).
+    Alerts are generated automatically when a KPI crosses a threshold.
     """
     conn = _get_conn()
     rows = conn.execute("""
@@ -267,10 +267,10 @@ def save_kpi_alert(
     sport: Optional[str] = None,
 ) -> dict:
     """
-    Registra una alerta de KPI en la BD.
+    Records a KPI alert in the DB.
     alert_type: 'overreaching', 'ef_drop', 'decoupling_high',
                 'peak_power_drop', 'ramp_rate_high', 'improvement'
-    Llamar cuando se detecta un patrón significativo.
+    Call when a significant pattern is detected.
     """
     conn = _get_conn()
     conn.execute("""
@@ -288,9 +288,9 @@ def save_agent_note(
     tags: Optional[list[str]] = None,
 ) -> dict:
     """
-    Guarda una nota del agente en la BD.
-    Usar para registrar observaciones, patrones detectados,
-    recomendaciones o cualquier insight que deba persistir entre sesiones.
+    Saves an agent note to the DB.
+    Use to record observations, detected patterns,
+    recommendations, or any insight that should persist across sessions.
     category: 'performance', 'biomechanics', 'nutrition', 'recovery', 'general'
     """
     conn = _get_conn()
@@ -313,8 +313,8 @@ def get_agent_notes(
     category: Optional[str] = None,
 ) -> list[dict]:
     """
-    Recupera notas del agente de los últimos N días.
-    Usar al inicio de cada sesión para recordar contexto previo.
+    Retrieves agent notes from the last N days.
+    Use at the start of each session to recall previous context.
     """
     conn = _get_conn()
     query = """
@@ -338,8 +338,8 @@ def get_agent_notes(
 
 def get_weekly_snapshot(week_start: str, sport: str = "Ride") -> dict:
     """
-    Trae el snapshot de una semana específica.
-    week_start: 'YYYY-MM-DD' (lunes de la semana)
+    Fetches the snapshot for a specific week.
+    week_start: 'YYYY-MM-DD' (Monday of the week)
     """
     conn = _get_conn()
     row = conn.execute("""
@@ -348,11 +348,11 @@ def get_weekly_snapshot(week_start: str, sport: str = "Ride") -> dict:
     """, (week_start, sport)).fetchone()
     conn.close()
     if not row:
-        return {"message": f"Sin snapshot para semana {week_start} / {sport}"}
+        return {"message": f"No snapshot for week {week_start} / {sport}"}
     return dict(row)
 
 
-# ── Session metrics (CCI, EF por zona, tendencias) ──────────────────────────
+# ── Session metrics (CCI, EF by zone, trends) ────────────────────────────────
 
 def _init_session_metrics(conn: sqlite3.Connection):
     conn.execute("""
@@ -375,10 +375,10 @@ def _init_session_metrics(conn: sqlite3.Connection):
             hr_drift_pct REAL,
             decoupling_pct REAL,
             variability_index REAL,
-            -- Carga
+            -- Load
             tss REAL,
             np_w REAL,
-            -- Contexto del día
+            -- Day context
             hrv_day REAL,
             hrv_factor REAL,
             hrv_interpretation TEXT,
@@ -394,9 +394,9 @@ def _init_session_metrics(conn: sqlite3.Connection):
 
 def save_session_metrics(session_data: dict) -> dict:
     """
-    Guarda el resultado de analyze_session en la BD local.
-    Llamar siempre después de analyze_session para persistir los KPIs.
-    La BD es la fuente de verdad para las tendencias longitudinales.
+    Saves the result of analyze_session to the local DB.
+    Always call after analyze_session to persist the KPIs.
+    The DB is the source of truth for longitudinal trends.
     """
     conn = _get_conn()
     _init_session_metrics(conn)
@@ -454,9 +454,9 @@ def get_session_history(
     sport: str = None,
 ) -> dict:
     """
-    Trae el historial de CCI y EF desde la BD local para un tipo de sesión.
-    Calcula tendencias sobre los datos guardados.
-    Usar para análisis longitudinal sin gastar tokens en llamadas a intervals.
+    Fetches CCI and EF history from the local DB for a session type.
+    Calculates trends over the saved data.
+    Use for longitudinal analysis without spending tokens on intervals.icu calls.
     """
     conn = _get_conn()
     _init_session_metrics(conn)
@@ -478,7 +478,7 @@ def get_session_history(
     if not rows:
         return {
             "session_type": session_type,
-            "message": "Sin datos en BD. Usar analyze_session + save_session_metrics para comenzar.",
+            "message": "No data in DB. Use analyze_session + save_session_metrics to get started.",
             "weeks_requested": weeks,
         }
 
@@ -488,20 +488,20 @@ def get_session_history(
         d["ef_by_zone"] = json.loads(d.get("ef_by_zone") or "{}")
         d["flags"] = json.loads(d.get("flags") or "[]")
 
-    # Calcular tendencia CCI_normalized
+    # Calculate CCI_normalized trend
     cci_values = [d["cci_normalized"] or d["cci_avg"] for d in data if d.get("cci_avg")]
 
     def trend_label(values):
         if len(values) < 3:
-            return "insuficiente"
+            return "insufficient"
         first = sum(values[:3]) / 3
         last = sum(values[-3:]) / 3
         delta = ((last - first) / first) * 100
-        if delta < -3: return f"MEJORA_REAL ({delta:.1f}%)"
-        if delta < -1: return f"MEJORA_LEVE ({delta:.1f}%)"
+        if delta < -3: return f"REAL_IMPROVEMENT ({delta:.1f}%)"
+        if delta < -1: return f"SLIGHT_IMPROVEMENT ({delta:.1f}%)"
         if delta <= 1: return f"PLATEAU ({delta:.1f}%)"
-        if delta <= 3: return f"CAIDA_LEVE (+{delta:.1f}%)"
-        return f"CAIDA_REAL (+{delta:.1f}%)"
+        if delta <= 3: return f"SLIGHT_DECLINE (+{delta:.1f}%)"
+        return f"REAL_DECLINE (+{delta:.1f}%)"
 
     return {
         "session_type": session_type,
