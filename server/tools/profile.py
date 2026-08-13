@@ -50,17 +50,16 @@ def get_athlete_extended_profile() -> dict:
 
 def update_bike_fit(
     crank_length_current_mm: Optional[float] = None,
-    crank_length_target_mm: Optional[float] = None,
+    crank_length_previous_mm: Optional[float] = None,
     crank_change_status: Optional[str] = None,
     saddle_height_mm: Optional[float] = None,
     saddle_setback_mm: Optional[float] = None,
     torso_angle_deg: Optional[float] = None,
     hip_angle_top_dead_center_deg: Optional[float] = None,
     knee_angle_bottom_deg: Optional[float] = None,
-    elbow_angle_deg: Optional[float] = None,
-    stack_mm: Optional[float] = None,
-    reach_mm: Optional[float] = None,
-    drop_mm: Optional[float] = None,
+    elbow_angle_aero_deg: Optional[float] = None,
+    reach_total_mm: Optional[float] = None,
+    drop_saddle_to_pads_mm: Optional[float] = None,
     notes: Optional[str] = None,
 ) -> dict:
     """
@@ -68,6 +67,7 @@ def update_bike_fit(
     Usar cuando el atleta reporte un cambio de posicion, nuevo fitting,
     o actualizacion de angulos tras analisis de video.
     crank_change_status: 'pendiente', 'en_proceso', 'completado'
+    notes: se guarda en crank_length_mm.adaptation_notes
     """
     data = _load()
     if "error" in data:
@@ -79,8 +79,8 @@ def update_bike_fit(
 
     if crank_length_current_mm is not None:
         crank["current"] = crank_length_current_mm
-    if crank_length_target_mm is not None:
-        crank["target"] = crank_length_target_mm
+    if crank_length_previous_mm is not None:
+        crank["previous"] = crank_length_previous_mm
     if crank_change_status is not None:
         crank["change_status"] = crank_change_status
     if saddle_height_mm is not None:
@@ -93,16 +93,14 @@ def update_bike_fit(
         pos["hip_angle_top_dead_center_deg"] = hip_angle_top_dead_center_deg
     if knee_angle_bottom_deg is not None:
         pos["knee_angle_bottom_deg"] = knee_angle_bottom_deg
-    if elbow_angle_deg is not None:
-        pos["elbow_angle_deg"] = elbow_angle_deg
-    if stack_mm is not None:
-        pos["stack_mm"] = stack_mm
-    if reach_mm is not None:
-        pos["reach_mm"] = reach_mm
-    if drop_mm is not None:
-        pos["drop_mm"] = drop_mm
+    if elbow_angle_aero_deg is not None:
+        pos["elbow_angle_aero_deg"] = elbow_angle_aero_deg
+    if reach_total_mm is not None:
+        pos["reach_total_mm"] = reach_total_mm
+    if drop_saddle_to_pads_mm is not None:
+        pos["drop_saddle_to_pads_mm"] = drop_saddle_to_pads_mm
     if notes is not None:
-        pos["notes"] = notes
+        crank["adaptation_notes"] = notes
 
     _save(data)
     return {"updated": True, "bike_fit": data["bike_fit"]}
