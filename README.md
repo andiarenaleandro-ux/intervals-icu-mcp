@@ -20,7 +20,7 @@ It's not just another dashboard. It enables analysis that doesn't exist today in
 
 1. **Clone the repo**
    ```bash
-   git clone https://github.com/<your-username>/intervals-icu-mcp.git
+   git clone https://github.com/andiarenaleandro-ux/intervals-icu-mcp.git
    cd intervals-icu-mcp
    ```
 
