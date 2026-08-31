@@ -5,6 +5,7 @@
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License MIT](https://img.shields.io/badge/license-MIT-green)
 ![MCP Protocol](https://img.shields.io/badge/protocol-MCP-orange)
+[![M8ven Score](https://m8ven.ai/badge/mcp/andiarenaleandro-ux-intervals-icu-mcp-1lp58h)](https://m8ven.ai/mcp/andiarenaleandro-ux-intervals-icu-mcp-1lp58h)
 
 ---
 
